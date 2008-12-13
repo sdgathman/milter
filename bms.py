@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.137  2008/12/06 21:13:57  customdesigned
+# Fix some reject messages.
+#
 # Revision 1.136  2008/12/04 19:42:46  customdesigned
 # SPF Pass policy
 #
@@ -317,6 +320,7 @@ banned_exts = mime.extlist.split(',')
 scan_zip = False
 scan_html = True
 scan_rfc822 = True
+cbv_internal = False
 internal_connect = ()
 trusted_relay = ()
 private_relay = ()
@@ -417,7 +421,7 @@ def read_config(list):
   spam_words = cp.getlist(section,'spam_words')
 
   # scrub section
-  global hide_path, reject_virus_from
+  global hide_path, reject_virus_from, cbv_internal
   hide_path = cp.getlist('scrub','hide_path')
   reject_virus_from = cp.getlist('scrub','reject_virus_from')
 
@@ -906,6 +910,19 @@ class bmsMilter(Milter.Milter):
         return rc
       self.greylist = True
     else:
+      if self.internal_connection:
+        p = SPFPolicy(q.s)
+        q = spf.query(self.connectip,self.canon_from,self.hello_name,
+                receiver=self.receiver,strict=False)
+        q.result = 'pass'
+        if self.need_cbv(p.getPassPolicy(),q,'internal'):
+          self.log('REJECT: internal mail from',q.s)
+          self.setreply('550','5.7.1',
+            "We don't accept internal mail from %s" %q.o,
+            "Your email from %s comes from an internal IP, however"%q.o,
+            "internal senders are not authorized to use %s."%q.o
+          )
+          return Milter.REJECT
       rc = Milter.CONTINUE
     # FIXME: parse Received-SPF from trusted_relay for SPF result
     res = self.spf and self.spf_guess
