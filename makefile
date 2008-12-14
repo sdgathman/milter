@@ -6,3 +6,6 @@ tar:
 	tar cvf $(VERS).tar $(VERS)
 	gzip -v $(VERS).tar
 	rm -rf $(VERS)
+
+tag:	
+	cvs tag -F $(V)
