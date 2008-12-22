@@ -4,7 +4,7 @@
 
 %define __python python2.4
 %define version 0.8.12
-%define release 1%{?dist}.py24
+%define release 2%{?dist}.py24
 # what version of RH are we building for?
 %define redhat7 0
 
@@ -187,6 +187,8 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Sun Dec 21 2008 Stuart Gathman <stuart@bmsi.com> 0.8.12-2
+- Fix internal_policy
 * Mon Nov 24 2008 Stuart Gathman <stuart@bmsi.com> 0.8.12-1
 - 2 demerits for HELO after MAIL FROM
 - Make initscript use pid file.
