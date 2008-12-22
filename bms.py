@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.138  2008/12/13 21:22:51  customdesigned
+# Split off pymilter
+#
 # Revision 1.137  2008/12/06 21:13:57  customdesigned
 # Fix some reject messages.
 #
@@ -320,7 +323,7 @@ banned_exts = mime.extlist.split(',')
 scan_zip = False
 scan_html = True
 scan_rfc822 = True
-cbv_internal = False
+internal_policy = False
 internal_connect = ()
 trusted_relay = ()
 private_relay = ()
@@ -421,9 +424,10 @@ def read_config(list):
   spam_words = cp.getlist(section,'spam_words')
 
   # scrub section
-  global hide_path, reject_virus_from, cbv_internal
+  global hide_path, reject_virus_from, internal_policy
   hide_path = cp.getlist('scrub','hide_path')
   reject_virus_from = cp.getlist('scrub','reject_virus_from')
+  internal_policy = cp.getboolean('scrub','internal_policy')
 
   # wiretap section
   global blind_wiretap,wiretap_users,wiretap_dest,discard_users,mail_archive
@@ -910,11 +914,11 @@ class bmsMilter(Milter.Milter):
         return rc
       self.greylist = True
     else:
-      if self.internal_connection:
-        p = SPFPolicy(q.s)
+      if internal_policy and self.internal_connection:
         q = spf.query(self.connectip,self.canon_from,self.hello_name,
                 receiver=self.receiver,strict=False)
         q.result = 'pass'
+        p = SPFPolicy(q.s)
         if self.need_cbv(p.getPassPolicy(),q,'internal'):
           self.log('REJECT: internal mail from',q.s)
           self.setreply('550','5.7.1',
