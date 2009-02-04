@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.139  2008/12/22 02:34:39  customdesigned
+# Fix internal policy
+#
 # Revision 1.138  2008/12/13 21:22:51  customdesigned
 # Split off pymilter
 #
@@ -382,7 +385,8 @@ def read_config(list):
     'supply_sender': 'no',
     'best_guess': 'no',
     'dspam_internal': 'yes',
-    'case_sensitive_localpart': 'no'
+    'case_sensitive_localpart': 'no',
+    'internal_policy': 'no'
   })
   cp.read(list)
   if cp.has_option('milter','datadir'):
@@ -1141,7 +1145,7 @@ class bmsMilter(Milter.Milter):
       if self.need_cbv(p.getPermErrorPolicy(),q,'permerror'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
         # latest SPF draft recommends 5.5.2 instead of 5.7.1
-        self.setreply(str(code),'5.5.2',txt,
+        self.setreply(str(code),'5.5.2',txt.replace('\0','^@'),
           'There is a fatal syntax error in the SPF record for %s' % q.o,
           'We cannot accept mail from %s until this is corrected.' % q.o
         )
@@ -1306,7 +1310,8 @@ class bmsMilter(Milter.Milter):
 
       # check for spam that claims to be legal
       lval = val.lower().strip()
-      for adv in ("adv:","adv.","adv ","[adv]","(adv)","advt:","advert:"):
+      for adv in ("adv:","adv.","adv ",
+        "<adv>","[adv]","(adv)","advt:","advert:","[spam]"):
         if lval.startswith(adv):
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','Advertising not accepted here')
@@ -1568,11 +1573,11 @@ class bmsMilter(Milter.Milter):
               sender = dspam_users.get(self.canon_from)
               if sender:
                 self.log("SPAM: %s" % sender)   # log user for SPAM
-                ds.add_spam(sender,txt)
-                txt = None
                 self.fp.seek(0)
                 self.gossip_header()
                 self.fp = None
+                ds.add_spam(sender,txt)
+                txt = None
                 return Milter.DISCARD
             elif user == 'falsepositive' and self.internal_connection:
               sender = dspam_users.get(self.canon_from)
