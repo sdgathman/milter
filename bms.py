@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.140  2009/02/04 02:40:14  customdesigned
+# Parse gossip header before add_spam.  Replace nulls in smtp error txt.
+# Default internal_policy flag false.
+#
 # Revision 1.139  2008/12/22 02:34:39  customdesigned
 # Fix internal policy
 #
@@ -330,6 +334,7 @@ internal_policy = False
 internal_connect = ()
 trusted_relay = ()
 private_relay = ()
+internal_mta = ()
 trusted_forwarder = ()
 internal_domains = ()
 banned_users = ()
@@ -397,7 +402,7 @@ def read_config(list):
   tempfile.tempdir = cp.get('milter','tempdir')
   global socketname, timeout, check_user, log_headers
   global internal_connect, internal_domains, trusted_relay, hello_blacklist
-  global case_sensitive_localpart, private_relay
+  global case_sensitive_localpart, private_relay, internal_mta
   socketname = cp.get('milter','socket')
   timeout = cp.getintdefault('milter','timeout',600)
   check_user = cp.getaddrset('milter','check_user')
@@ -406,6 +411,7 @@ def read_config(list):
   internal_domains = cp.getlist('milter','internal_domains')
   trusted_relay = cp.getlist('milter','trusted_relay')
   private_relay = cp.getlist('milter','private_relay')
+  internal_mta = cp.getlist('milter','internal_mta')
   hello_blacklist = cp.getlist('milter','hello_blacklist')
   case_sensitive_localpart = cp.getboolean('milter','case_sensitive_localpart')
 
@@ -820,6 +826,16 @@ class bmsMilter(Milter.Milter):
     self.cbv_needed = None
     self.whitelist_sender = False
     self.postmaster_reply = False
+    if f == '<>' and internal_mta and self.internal_connection:
+      if not iniplist(self.connectip,internal_mta):
+        self.log("REJECT: pretend MTA at ",self.connectip,
+            " sending MAIL FROM ",self.canon_from)
+        self.setreply('550','5.7.1',
+        'Your PC is trying to send a DSN even though it is not an MTA.',
+        'If you are running MS Outlook, it is broken.  If you want to',
+        'send return receipts, use a more standards compliant email client.'
+        )
+        return Milter.REJECT
     t = parse_addr(f)
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
@@ -1169,6 +1185,7 @@ class bmsMilter(Milter.Milter):
       param = param2dict(str)
       self.notify = param.get('NOTIFY','FAILURE,DELAY').upper().split(',')
       if 'NEVER' in self.notify: self.notify = ()
+      # FIXME: self.notify needs to be by rcpt
       #self.rcpt_param = param
     except:
       self.log("REJECT: invalid PARAM:",to,str)
