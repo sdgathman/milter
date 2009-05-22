@@ -25,7 +25,7 @@ Mascot by <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Aug 26, 2008</h4>
+Last updated May 20, 2009</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
 <a href="http://bmsi.com/mailman/listinfo/pymilter">Subscribe to mailing list</a> |
@@ -40,23 +40,47 @@ See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/sho
 libmilter.  The milter module for <a href="//www.python.org">Python</a>
 provides a python interface to libmilter that exploits all its features.
 <p>
-Sendmail 8.12 officially releases libmilter.  
+Sendmail 8.12 officially released libmilter.  
 Version 8.12 seems to be more robust, and includes new privilege
 separation features to enhance security.  Even better, sendmail 8.13
 supports socket maps, which makes <a href="pysrs.html">pysrs</a> much more
 efficient and secure.   Sendmail 8.14 finally supports modifying 
-MAIL FROM via the milter API.  Unfortunately, I haven't gotten around
-to supporting that yet in python milter.
+MAIL FROM via the milter API, and this is supported in pymilter-0.9
+allowing pysrs to provide an srsmilter.
 </td></tr>
 </table>
 
 <h3><a name=overview>Overview</a></h3>
 
-This package provides a robust toolkit for Python <a
-href="#milter">milters</a>, and the beginnings of a general purpose mail
-filtering system written in Python.
+To accomodate other open source projects using pymilter, this package has been
+shedding modules which can be used by other packages.
+<ul>
+<li> The pymilter package provides a robust toolkit for Python <a
+href="#milter">milters</a>.  
+<li> The milter package provides the beginnings of a
+general purpose mail filtering system written in Python.
+<li> The <a href="pysrs.html">pysrs</a> package provides an <code>SRS</code>
+library, <code>SES</code> library, a sendmail socketmap daemon implementing
+SRS, and (Real Soon Now) an srsmilter daemon implementing SRS.
+<li> The <a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a> package
+provides the <code>spf</code> module, a well tested implementation of the of
+the <a href="http://openspf.com">SPF</a> protocol, which is useful for
+detecting email forgery. 
+<li> The <a href="pygossip.html">pygossip</a> package provides the
+<code>gossip</code> library and server daemon for the GOSSiP protocol, which
+exchanges reputation of qualified domains.  (Qualified in the milter package
+means that example.com:PASS tracks a different reputation than
+example.com:NEUTRAL.)
+<li> The <a href="http://pydns.sourceforge.net/">pydns</a> package provides the
+low level <code>DNS</code> library for python DNS lookups.  It is much smaller
+and lighter than the more capable dnspython library.  Low level lookups are
+needed to find SPF and MX records for instance.  
+<li> The <a href="dspam.html">pydspam</a> package wraps an old version of
+libdspam for python.  The C API changed dramatically for new versions, and I
+haven't gotten things updated yet.  Another content filter might be in order.
+</ul>
 <p>
-At the lowest level, the 'milter' module provides a thin wrapper around the
+At the lowest level, the <code>milter</code> module provides a thin wrapper around the
 <a href="https://www.milter.org/developers/api/index">
 sendmail libmilter API</a>.  This API lets you register callbacks for 
 a number of events in the
@@ -66,9 +90,9 @@ the envelope sender and recipients, the top level mail headers, and
 the message body.  There are options to mangle all of these components
 of the message as it passes through the milter.
 <p>
-At the next level, the 'Milter' module (note the case difference) provides a
-Python friendly object oriented wrapper for the low level API.  To use the
-Milter module, an application registers a 'factory' to create an object
+At the next level, the <code>Milter</code> module (note the case difference)
+provides a Python friendly object oriented wrapper for the low level API.  To
+use the Milter module, an application registers a 'factory' to create an object
 for each connection from a MTA to sendmail.  These connection objects
 must provide methods corresponding to the libmilter callback events.
 <p>
@@ -77,15 +101,12 @@ with processing the message.  This is a big advantage of milters over
 other mail filtering systems.  Unwanted mail can be stopped in its
 tracks at the earliest possible point.
 <p>
-The Milter.Milter class provides default implementations for event
+The <code>Milter.Milter</code> class provides default implementations for event
 methods that
 do nothing, and also provides wrappers for the libmilter methods to mutate
 the message.
 <p>
-The 'spf' module provides an implementation of <a href="http://openspf.com">
-SPF</a> useful for detecting email forgery.
-<p>
-The 'mime' module provides a wrapper for the Python email package that
+The <code>mime</code> module provides a wrapper for the Python email package that
 fixes some bugs, and simplifies modifying selected parts of a MIME message.
 <p>
 Finally, the bms.py application is both a sample of how to use the
@@ -218,9 +239,11 @@ installations are too numerous to list at this point.
 
 Nearly a dozen people have emailed me begging for a feature to copy
 outgoing and/or incoming mail to a backup directory by user.  Ok, it
-looks like this is a most requested feature for 0.5.6.  In the meantime,
+looks like this is a most requested feature.  In the meantime,
 here are some things to consider:
 <ul>
+<li> The milter package (bms.py) supports the mail_archive option
+in the <code>[wiretap]</code> section.  This is not by user, however.
 <li> If you want to equivalent of a Bcc added to each message, this
 is very easy to do in the python code for bms.py.   See below.
 <li> If you want to copy to a file in a directory (thus avoiding having to
@@ -253,7 +276,6 @@ would look.  Feel free to make specific suggestions about config file
 entries.  Be sure to handle both Bcc and file copies, and designating what
 mail should be copied.  How should "outgoing" be defined?  Implementing it is
 easy once the configuration is designed.
-
 
 <hr>
 <p>
