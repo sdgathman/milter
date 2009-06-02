@@ -82,7 +82,7 @@ class spfMilter(Milter.Base):
     self.new_headers.append((name,val,idx))
     self.log('%s: %s' % (name,val))
 
-  @noreply
+  @Milter.noreply
   def connect(self,hostname,unused,hostaddr):
     self.internal_connection = False
     self.trusted_relay = False
@@ -106,7 +106,7 @@ class spfMilter(Milter.Base):
     self.log("connect from %s at %s %s" % (hostname,hostaddr,connecttype))
     return Milter.CONTINUE
 
-  @noreply
+  @Milter.noreply
   def hello(self,hostname):
     self.hello_name = hostname
     self.log("hello from %s" % hostname)
@@ -131,7 +131,6 @@ class spfMilter(Milter.Base):
       if rc != Milter.CONTINUE: return rc
     return Milter.CONTINUE
 
-  @noreply
   def eom(self):
     for name,val,idx in self.new_headers:
       try:
