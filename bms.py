@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.141  2009/05/20 02:48:18  customdesigned
+# Restrict internal DSNs to official MTAs.
+#
 # Revision 1.140  2009/02/04 02:40:14  customdesigned
 # Parse gossip header before add_spam.  Replace nulls in smtp error txt.
 # Default internal_policy flag false.
@@ -662,7 +665,7 @@ cbv_cache = AddrCache(renew=7)
 auto_whitelist = AddrCache(renew=60)
 blacklist = AddrCache(renew=30)
 
-class bmsMilter(Milter.Milter):
+class bmsMilter(Milter.Base):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
      check SPF, and other anti-forgery features, and implement wiretapping
      and smart alias redirection."""
@@ -829,7 +832,7 @@ class bmsMilter(Milter.Milter):
     if f == '<>' and internal_mta and self.internal_connection:
       if not iniplist(self.connectip,internal_mta):
         self.log("REJECT: pretend MTA at ",self.connectip,
-            " sending MAIL FROM ",self.canon_from)
+            " sending MAIL FROM ",f)
         self.setreply('550','5.7.1',
         'Your PC is trying to send a DSN even though it is not an MTA.',
         'If you are running MS Outlook, it is broken.  If you want to',
@@ -1192,10 +1195,11 @@ class bmsMilter(Milter.Milter):
       self.setreply('550','5.7.1','Invalid RCPT PARAM')
       return Milter.REJECT
     # mail to MAILER-DAEMON is generally spam that bounced
-    if to.startswith('<MAILER-DAEMON@'):
-      self.log('REJECT: RCPT TO:',to,str)
-      self.setreply('550','5.7.1','MAILER-DAEMON does not accept mail')
-      return Milter.REJECT
+    for daemon in ('MAILER-DAEMON','auto-notify'):
+      if to.startswith('<%s@'%daemon):
+        self.log('REJECT: RCPT TO:',to,str)
+        self.setreply('550','5.7.1','%s does not accept mail'%daemon)
+        return Milter.REJECT
     try:
       t = parse_addr(to)
       newaddr = False
@@ -1231,12 +1235,12 @@ class bmsMilter(Milter.Milter):
                 self.setreply('550','5.7.1','Invalid SES signature')
                 return Milter.REJECT
               # reject for certain recipients are delayed until after DATA
-	      if auto_whitelist.has_precise_key(self.canon_from):
-		self.log("WHITELIST: DSN from",self.canon_from)
-	      else:
-                if srs_reject_spoofed \
-                  and user.lower() not in ('postmaster','abuse'):
-                  return self.forged_bounce(to)
+              if auto_whitelist.has_precise_key(self.canon_from):
+                self.log("WHITELIST: DSN from",self.canon_from)
+              else:
+                #if srs_reject_spoofed \
+                #  and user.lower() not in ('postmaster','abuse'):
+                #  return self.forged_bounce(to)
                 self.data_allowed = not srs_reject_spoofed
 
         if not self.internal_connection and domain in private_relay:
@@ -1331,12 +1335,12 @@ class bmsMilter(Milter.Milter):
         "<adv>","[adv]","(adv)","advt:","advert:","[spam]"):
         if lval.startswith(adv):
           self.log('REJECT: %s: %s' % (name,val))
-          self.setreply('550','5.7.1','Advertising not accepted here')
+          self.setreply('550','5.7.1','No soliciting allowed')
           return Milter.REJECT
       for adv in ("adv","(adv)","[adv]"):
         if lval.endswith(adv):
           self.log('REJECT: %s: %s' % (name,val))
-          self.setreply('550','5.7.1','Advertising not accepted here')
+          self.setreply('550','5.7.1','No soliciting allowed')
           return Milter.REJECT
 
       # check for porn keywords
@@ -1406,6 +1410,11 @@ class bmsMilter(Milter.Milter):
         "Thank you."
       )
     return Milter.REJECT
+
+  def data(self):
+    if not self.data_allowed:
+      return self.forged_bounce()
+    return Milter.CONTINUE
     
   def header(self,name,hval):
     if not self.data_allowed:
@@ -1423,7 +1432,7 @@ class bmsMilter(Milter.Milter):
     elif self.whitelist_sender:
       # check for AutoReplys
       if (lname == 'subject' and reautoreply.match(val)) \
-	or (lname == 'user-agent' and val.lower().startswith('vacation')):
+        or (lname == 'user-agent' and val.lower().startswith('vacation')):
           self.whitelist_sender = False
           self.log('AUTOREPLY: not whitelisted')
 
@@ -1503,12 +1512,20 @@ class bmsMilter(Milter.Milter):
         self.add_header('X-DSpam-HeaderScore','%f'%ds.probability)
       finally:
         ds.destroy()
+    self.ioerr = None
     return Milter.CONTINUE
 
+  @Milter.noreply
   def body(self,chunk):         # copy body to temp file
-    if self.fp:
-      self.fp.write(chunk)      # IOError causes TEMPFAIL in milter
-      self.bodysize += len(chunk)
+    try:
+      if self.fp:
+        self.fp.write(chunk)      # IOError causes TEMPFAIL in milter
+        self.bodysize += len(chunk)
+    except Exception,x:
+      if not self.ioerr:
+        self.ioerr = x
+        self.log(x)
+      self.fp = None
     return Milter.CONTINUE
 
   def _headerChange(self,msg,name,value):
@@ -1697,15 +1714,15 @@ class bmsMilter(Milter.Milter):
         if self.spf and self.mailfrom != '<>':
           # check that sender accepts quarantine DSN
           self.fp.seek(0)
-	  if self.spf.result == 'pass' or self.cbv_needed:
-	    msg = mime.message_from_file(self.fp)
-	    if self.spf.result == 'pass':
-	      rc = self.send_dsn(self.spf,msg,'quarantine')
-	    else:
-	      rc = self.do_needed_cbv(msg)
-	    del msg
-	  else:
-	    rc = self.send_dsn(self.spf)
+          if self.spf.result == 'pass' or self.cbv_needed:
+            msg = mime.message_from_file(self.fp)
+            if self.spf.result == 'pass':
+              rc = self.send_dsn(self.spf,msg,'quarantine')
+            else:
+              rc = self.do_needed_cbv(msg)
+            del msg
+          else:
+            rc = self.send_dsn(self.spf)
           if rc != Milter.CONTINUE:
             self.fp = None
             return rc
@@ -1770,6 +1787,11 @@ class bmsMilter(Milter.Milter):
     return False
 
   def eom(self):
+    if self.ioerr:
+      fname = tempfile.mktemp(".ioerr")  # save message that caused crash
+      os.rename(self.tempname,fname)
+      self.tempname = None
+      return Milter.TEMPFAIL
     if not self.fp:
       return Milter.ACCEPT      # no message collected - so no eom processing
 

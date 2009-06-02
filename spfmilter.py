@@ -32,7 +32,10 @@ def read_config(list):
   conf.miltername = cp.getdefault('milter','name','pyspffilter')
   conf.trusted_relay = cp.getlist('milter','trusted_relay')
   conf.internal_connect = cp.getlist('milter','internal_connect')
-  conf.trusted_forwarder = cp.getlist('spf','trusted_relay')
+  if cp.has_option('spf','trusted_forwarder'):
+    conf.trusted_forwarder = cp.getlist('spf','trusted_forwarder')
+  else: # backward compatibility with config typo
+    conf.trusted_forwarder = cp.getlist('spf','trusted_relay')
   conf.access_file = cp.getdefault('spf','access_file',None)
   return conf
 
@@ -61,7 +64,7 @@ class SPFPolicy(object):
 	except KeyError:
 	  return None
   
-class spfMilter(Milter.Milter):
+class spfMilter(Milter.Base):
   "Milter to check SPF.  Each connection gets its own instance."
 
   def log(self,*msg):
@@ -79,6 +82,7 @@ class spfMilter(Milter.Milter):
     self.new_headers.append((name,val,idx))
     self.log('%s: %s' % (name,val))
 
+  @noreply
   def connect(self,hostname,unused,hostaddr):
     self.internal_connection = False
     self.trusted_relay = False
@@ -102,6 +106,7 @@ class spfMilter(Milter.Milter):
     self.log("connect from %s at %s %s" % (hostname,hostaddr,connecttype))
     return Milter.CONTINUE
 
+  @noreply
   def hello(self,hostname):
     self.hello_name = hostname
     self.log("hello from %s" % hostname)
@@ -112,12 +117,12 @@ class spfMilter(Milter.Milter):
   # of each message.
   def envfrom(self,f,*str):
     self.log("mail from",f,str)
+    self.new_headers = []
     if not self.hello_name:
       self.log('REJECT: missing HELO')
       self.setreply('550','5.7.1',"It's polite to say helo first.")
       return Milter.REJECT
     self.mailfrom = f
-    self.new_headers = []
     t = parse_addr(f)
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
@@ -126,24 +131,13 @@ class spfMilter(Milter.Milter):
       if rc != Milter.CONTINUE: return rc
     return Milter.CONTINUE
 
-  def envrcpt(self,f,*str):
-    return Milter.CONTINUE
-
-  def header(self,name,hval):
-    return Milter.CONTINUE
-
-  def eoh(self):
-    return Milter.CONTINUE
-
+  @noreply
   def eom(self):
     for name,val,idx in self.new_headers:
       try:
 	self.addheader(name,val,idx)
       except:
 	self.addheader(name,val)	# older sendmail can't insheader
-    return Milter.CONTINUE
-
-  def close(self):
     return Milter.CONTINUE
 
   def check_spf(self):
