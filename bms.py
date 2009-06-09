@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.142  2009/06/02 21:37:01  customdesigned
+# Use pymilter-0.9.2 features
+#
 # Revision 1.141  2009/05/20 02:48:18  customdesigned
 # Restrict internal DSNs to official MTAs.
 #
@@ -966,7 +969,7 @@ class bmsMilter(Milter.Base):
       if res not in ('permerror','softfail'):
         self.cbv_needed = None
     elif cbv_cache.has_key(self.canon_from) and cbv_cache[self.canon_from] \
-        or domain in blacklist:
+        or self.canon_from in blacklist:
       # FIXME: don't use cbv_cache for blacklist if policy is 'OK'
       if not self.internal_connection:
         self.offense(inc=2)
