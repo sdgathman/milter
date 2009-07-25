@@ -143,8 +143,16 @@ and change sample.py accordingly.
 <li> Q. How can I change the bounce message for an invalid recipient?
 I can only change the recipient in the eom callback, but the eom callback
 is never called when the recipient is invalid!
-<p>  A. Configure sendmail to use virtusertable, and send all unknown
-addresses to /dev/null.  For example,
+<p>  A.  For sendmail-8.13 and later, use pymilter-0.9.3 and clear
+<code>Milter.P_RCPT_REJ</code> in the _protocol_mask class var:
+<pre>
+class myMilter(Milter.Base):
+  def envrcpt(self,to,*params):
+      return Milter.CONTINUE
+myMilter._protocol_mask = myMilter.protocol_mask() & ~Milter.P_RCPT_REJ
+</pre>
+For sendmail-8.12 and earlier, configure sendmail to use virtusertable,
+and send all unknown addresses to /dev/null.  For example,
 <h4>/etc/mail/virtusertable</h4>
 <pre>
 @mycorp.com	dev-null

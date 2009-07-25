@@ -13,19 +13,19 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
 </map>
 </P>
 
-<table rules="none">
-<tr><td>
-<img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
-Mascot by <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
-</td>
-<td>
-<h1 align=center>Sendmail Milters in Python</h1>
+<h1 align=center>Sendmail/Postfix Milters in Python</h1>
 <h4 align=center>by <a href="mailto:%75%72%6D%61%6E%65%40%6E%65%75%72%61l%61%63%63%65%73%73%2E%63%6F%6D">Jim Niemira</a>
   and <a href="mailto:%73%74%75%61%72%74%40%62%6D%73%69%2E%63%6F%6D">
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated May 20, 2009</h4>
+Last updated Jun 16, 2009</h4>
+<table rules="none">
+<tr><td>
+<img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
+Mascot by students of <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
+</td>
+<td>
 
 See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
 <a href="http://bmsi.com/mailman/listinfo/pymilter">Subscribe to mailing list</a> |
@@ -33,35 +33,55 @@ See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/sho
 <a href="/python/dspam.html">pydspam</a> |
 <a href="/libdspam/dspam.html">libdspam</a>
 <p>
-<a href="//www.python.org">
-<img src="python55.gif" align=left alt="A Python"></a>
 <a href="//www.sendmail.org/">Sendmail</a> introduced a
-<a href="https://www.milter.org/developers/api/index"> new API</a> beginning with version 8.10 -
-libmilter.  The milter module for <a href="//www.python.org">Python</a>
-provides a python interface to libmilter that exploits all its features.
-<p>
-Sendmail 8.12 officially released libmilter.  
+<a href="https://www.milter.org/developers/api/index"> new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.
 Version 8.12 seems to be more robust, and includes new privilege
 separation features to enhance security.  Even better, sendmail 8.13
 supports socket maps, which makes <a href="pysrs.html">pysrs</a> much more
-efficient and secure.   Sendmail 8.14 finally supports modifying 
-MAIL FROM via the milter API, and this is supported in pymilter-0.9
-allowing pysrs to provide an srsmilter.
-</td></tr>
-</table>
+efficient and secure.   
+Sendmail 8.14 finally supports modifying 
+MAIL FROM via the milter API, and a data callback allowing spam to
+be rejected before beginning the DATA phase.
+<table><td>
+<a href="//www.python.org">
+<img src="python55.gif" align=left alt="A Python"></a>
+Pymilter provides a milter module for <a href="//www.python.org">Python</a>
+that implements a python interface to libmilter exploiting all its features.
+</td></table>
+<a href="http://www.postfix.org">
+<img src="postfix-logo.jpg" align=left alt="A Postmark"> </a>
+Now <a href="http://www.postfix.org">Postfix</a> also implements the
+milter protocol, and you can program
+<a href="http://www.postfix.org/MILTER_README.html">SMTP time filters</a>
+for Postfix in Python.
+</td></tr> </table>
+
+<h3> What's New </h3>
+
+<ul>
+<li> pymilter-0.9.2 supports the negotiate, data, and unknown callbacks.
+Protocol steps are automatically negotiated by the high-level Milter
+package by annotating callback methods with @nocallback or @noreply.
+
+<li> pymilter-0.9.1 supports CHGFROM, introduced with sendmail-8.14,
+ and also supported by postfix-2.3.
+</ul>
 
 <h3><a name=overview>Overview</a></h3>
 
 To accomodate other open source projects using pymilter, this package has been
 shedding modules which can be used by other packages.
 <ul>
-<li> The pymilter package provides a robust toolkit for Python <a
+<li> The <a href="http://spidey2.bmsi.com/pymilter/">pymilter</a> package provides a robust toolkit for Python <a
 href="#milter">milters</a>.  
-<li> The milter package provides the beginnings of a
-general purpose mail filtering system written in Python.
+<li> The <a href="policy.html">milter</a> package provides the beginnings of a
+general purpose mail filtering system written in Python.  It also includes
+a simple spfmilter that supports policy by domain and spf result via
+the sendmail access file.
 <li> The <a href="pysrs.html">pysrs</a> package provides an <code>SRS</code>
 library, <code>SES</code> library, a sendmail socketmap daemon implementing
-SRS, and (Real Soon Now) an srsmilter daemon implementing SRS.
+SRS, and (Real Soon Now) an srsmilter daemon implementing SRS,
+now that sendmail-8.14 supports CHGFROM and this is supported in pymilter-0.9.
 <li> The <a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a> package
 provides the <code>spf</code> module, a well tested implementation of the of
 the <a href="http://openspf.com">SPF</a> protocol, which is useful for
@@ -73,8 +93,9 @@ means that example.com:PASS tracks a different reputation than
 example.com:NEUTRAL.)
 <li> The <a href="http://pydns.sourceforge.net/">pydns</a> package provides the
 low level <code>DNS</code> library for python DNS lookups.  It is much smaller
-and lighter than the more capable dnspython library.  Low level lookups are
-needed to find SPF and MX records for instance.  
+and lighter than the more capable (and bigger)
+<a href="http://www.dnspython.org/"> dnspython</a> library.  Low level lookups
+are needed to find SPF and MX records for instance.  
 <li> The <a href="dspam.html">pydspam</a> package wraps an old version of
 libdspam for python.  The C API changed dramatically for new versions, and I
 haven't gotten things updated yet.  Another content filter might be in order.
