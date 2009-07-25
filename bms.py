@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
-# Revision 1.142  2009/06/02 21:37:01  customdesigned
-# Use pymilter-0.9.2 features
-#
 # Revision 1.141  2009/05/20 02:48:18  customdesigned
 # Restrict internal DSNs to official MTAs.
 #
@@ -332,6 +329,7 @@ block_chinese = False
 case_sensitive_localpart = False
 spam_words = ()
 porn_words = ()
+from_words = ()
 banned_exts = mime.extlist.split(',')
 scan_zip = False
 scan_html = True
@@ -370,6 +368,7 @@ supply_sender = False
 access_file = None
 timeout = 600
 banned_ips = set()
+banned_domains = set()
 greylist = None
 
 logging.basicConfig(
@@ -423,7 +422,7 @@ def read_config(list):
 
   # defang section
   global scan_rfc822, scan_html, block_chinese, scan_zip, block_forward
-  global banned_exts, porn_words, spam_words
+  global banned_exts, porn_words, spam_words, from_words
   if cp.has_section('defang'):
     section = 'defang'
     # for backward compatibility,
@@ -438,6 +437,7 @@ def read_config(list):
   block_forward = cp.getaddrset(section,'block_forward')
   porn_words = cp.getlist(section,'porn_words')
   spam_words = cp.getlist(section,'spam_words')
+  from_words = cp.getlist(section,'from_words')
 
   # scrub section
   global hide_path, reject_virus_from, internal_policy
@@ -1335,7 +1335,7 @@ class bmsMilter(Milter.Base):
       # check for spam that claims to be legal
       lval = val.lower().strip()
       for adv in ("adv:","adv.","adv ",
-        "<adv>","[adv]","(adv)","advt:","advert:","[spam]"):
+        "<adv>","<ad>","[adv]","(adv)","advt:","advert:","[spam]"):
         if lval.startswith(adv):
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting allowed')
@@ -1369,13 +1369,23 @@ class bmsMilter(Milter.Base):
 
     elif lname == 'from':
       fname,email = parseaddr(val)
+      for w in spam_words:
+        if fname.find(w) >= 0:
+          self.log('REJECT: %s: %s' % (name,val))
+          self.setreply('550','5.7.1','No soliciting')
+          return self.bandomain()
+      for w in from_words:
+        if fname.find(w) >= 0:
+          self.log('REJECT: %s: %s' % (name,val))
+          self.setreply('550','5.7.1','No soliciting')
+          return self.bandomain()
       # check for porn keywords
       lval = fname.lower().strip()
       for w in porn_words:
         if lval.find(w) >= 0:
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','Watch your language')
-          return Milter.REJECT
+          return self.bandomain()
       if email.lower().startswith('postmaster@'):
         # Yes, if From header comes last, this might not help much.
         # But this is a heuristic - if MTAs would send proper DSNs in
@@ -1412,6 +1422,17 @@ class bmsMilter(Milter.Base):
         "(http://openspf.org) to avoid bouncing mail to spoofed senders.",
         "Thank you."
       )
+    return Milter.REJECT
+
+  def bandomain(self):
+    if self.spf and self.spf.result == 'pass':
+      domain = self.canon_from.split('@')[-1]
+      if not domain in banned_domains:
+        try:
+          fp = open('banned_domains','at')
+          print >>fp,domain 
+        finally: fp.close()
+        banned_domains.add(domain)
     return Milter.REJECT
 
   def data(self):
