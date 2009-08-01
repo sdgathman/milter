@@ -1,6 +1,47 @@
 Title: Recent Changes
 
-<h2> Recent Changes </h2>
+<h2> Recent Changes for the <code>pymilter</code> project </h2>
+
+<h3> 0.9.3 </h3>
+Handle source routes in Milter.util.parse_addr().
+Fix unitialized optional arg in chgfrom().  Disable negotiate callback
+when libmilter &lt; 8.14.3 (runtime API version 1.0.1)
+
+<h3> 0.9.2 </h3>
+Change result of @noreply callbacks to NOREPLY when so negotiated.
+Cache callback negotiation.  Add new callback support: data,negotiate,unknown.
+Auto-negotiate protocol steps.  Fix missing address of optional param to
+addrcpt().
+
+<h3> 0.9.0 </h3>
+
+Spec file change for Fedora:
+stop using INSTALLED_FILES to make Fedora happy,
+remove config flag from start.sh glue,
+own /var/log/milter,  use _localstatedir.
+<p>
+
+<code>pymilter-0.9.0</code> is the first version after separating 
+<code>milter</code> and <code>pymilter</code>.  This will allow easier
+reuse by other projects using pymilter to wrap libmilter.
+In addition, we now support chgfrom and addrcpt_par in the milter API.
+NS records are now supported by Milter.dns.  I suspect that it might
+be useful to track reputation by nameserver to fight throwaway domains.
+
+<h2> Recent Changes for the <code>milter</code> project </h2>
+
+<h3> 0.8.12 </h3>
+
+Use the pid file in the initscript.  Fix bugs with greylisting config
+and adjust demerits for HELO fail.  Add an SPF Pass policy.
+Can be used to ban a domain.
+
+<h3> 0.8.11 </h3>
+
+Greylisting is now supported.  Messages from the 'vacation' program
+are now recognized as autoreplies.  IPs of trusted relays (secondary
+MXes, for instance) are never banned.  Added ban2zone.py to 
+convert banned IP lists to BIND zonefile data.
 
 <h3> 0.8.10 </h3>
 

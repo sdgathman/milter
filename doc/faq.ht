@@ -177,6 +177,12 @@ is a milter declaration for sendmail.cf with all timeouts specified:
 <pre>
 Xpythonfilter, S=local:/var/log/milter/pythonsock, F=T, T=C:5m;S:20s;R:60s;E:5m
 </pre>
+
+<li> Q. Once I feed my milter a valid address (which returns Milter.ACCEPT
+	from the envrcpt() method) the envrcpt() method is no longer called.
+	Is there something I can do to change this behavior?
+<p>  A. Return Milter.CONTINUE instead of Milter.ACCEPT from envrcpt().
+
 <li> Q. There is a Python traceback in the log file!  What happened to
 	my email?
 <p>  A. By default, when the milter fails with an untrapped exception, a
