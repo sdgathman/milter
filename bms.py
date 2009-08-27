@@ -255,6 +255,7 @@ from Milter.greylist import Greylist
 
 from fnmatch import fnmatchcase
 from email.Utils import getaddresses
+from glob import glob
 
 # Import gossip if available
 try:
@@ -668,6 +669,14 @@ cbv_cache = AddrCache(renew=7)
 auto_whitelist = AddrCache(renew=60)
 blacklist = AddrCache(renew=30)
 
+def isbanned(dom,s):
+  if dom in s: return True
+  a = dom.split('.')
+  if a[0] == '*': a = a[1:]
+  if len(a) < 3: return False
+  a[0] = '*'
+  return isbanned('.'.join(a),s)
+
 class bmsMilter(Milter.Base):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
      check SPF, and other anti-forgery features, and implement wiretapping
@@ -752,7 +761,7 @@ class bmsMilter(Milter.Base):
       self.log("REJECT: spam from self:",hostname)
       self.setreply('550','5.7.1',
         'Your mail server lies.  Its name is *not* %s.' % hostname)
-      return Milter.REJECT
+      return self.offense(inc=4)
     if hostname == 'GC':
       n = gc.collect()
       self.log("gc:",n,' unreachable objects')
@@ -829,6 +838,7 @@ class bmsMilter(Milter.Base):
     self.discard_list = []
     self.new_headers = []
     self.recipients = []
+    self.confidence = None
     self.cbv_needed = None
     self.whitelist_sender = False
     self.postmaster_reply = False
@@ -881,6 +891,11 @@ class bmsMilter(Milter.Base):
     self.internal_domain = False
     if len(t) == 2:
       user,domain = t
+      if isbanned(domain,banned_domains):
+        self.log("REJECT: banned domain",domain)
+	self.setreply('550','5.7.1',
+	  '%s has been identified as a spammer domain.')
+	return Milter.REJECT
       for pat in internal_domains:
         if fnmatchcase(domain,pat):
           self.internal_domain = True
@@ -988,7 +1003,7 @@ class bmsMilter(Milter.Base):
         self.log("BLACKLIST",self.canon_from)
     else:
       # REJECT delayed until after checking whitelist
-      if self.policy == 'REJECT':
+      if self.policy in ('REJECT', 'BAN'):
           self.log('REJECT: no PTR, HELO or SPF')
           self.setreply('550','5.7.1',
     "You must have a valid HELO or publish SPF: http://www.openspf.org ",
@@ -1088,6 +1103,10 @@ class bmsMilter(Milter.Base):
             "get this bounce, the message was not in fact a forgery, and you",
             "should IMMEDIATELY notify your email administrator of the problem."
           )
+          # Even the most idiotic admin that uses non-existent domains
+          # for helo is not going to forge 'gmail.com'.  So ban the IP too.
+	  if self.hello_name == 'gmail.com':
+	    self.offense(inc=4)
           return Milter.REJECT
         if hres == 'none' and spf_best_guess \
           and not dynip(self.hello_name,self.connectip):
@@ -1120,7 +1139,7 @@ class bmsMilter(Milter.Base):
         res = 'none'
         policy = p.getNonePolicy()
         if policy in ('CBV','DSN'):
-          self.offenses = 3    # ban ip if any bad recipient
+          self.offense(inc=2)    # ban ip if any bad recipient
         self.need_cbv(policy,q,'strike3')
         # REJECT delayed until after checking whitelist
     if res in ('deny', 'fail'):
@@ -1130,6 +1149,8 @@ class bmsMilter(Milter.Base):
         # A proper SPF fail error message would read:
         # forger.biz [1.2.3.4] is not allowed to send mail with the domain
         # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
+        if q.d in hello_blacklist:
+          self.offense(inc=4)
         return Milter.REJECT
     elif res == 'softfail':
       if self.need_cbv(p.getSoftfailPolicy(),q,'softfail'):
@@ -1238,9 +1259,9 @@ class bmsMilter(Milter.Base):
                 self.setreply('550','5.7.1','Invalid SES signature')
                 return Milter.REJECT
               # reject for certain recipients are delayed until after DATA
-              if auto_whitelist.has_precise_key(self.canon_from):
-                self.log("WHITELIST: DSN from",self.canon_from)
-              else:
+	      if auto_whitelist.has_precise_key(self.canon_from):
+		self.log("WHITELIST: DSN from",self.canon_from)
+	      else:
                 #if srs_reject_spoofed \
                 #  and user.lower() not in ('postmaster','abuse'):
                 #  return self.forged_bounce(to)
@@ -1340,7 +1361,7 @@ class bmsMilter(Milter.Base):
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting allowed')
           return Milter.REJECT
-      for adv in ("adv","(adv)","[adv]"):
+      for adv in ("adv","(adv)","[adv]","(non-spam)"):
         if lval.endswith(adv):
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting allowed')
@@ -1370,12 +1391,12 @@ class bmsMilter(Milter.Base):
     elif lname == 'from':
       fname,email = parseaddr(val)
       for w in spam_words:
-        if fname.find(w) >= 0:
+      	if fname.find(w) >= 0:
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting')
           return self.bandomain()
       for w in from_words:
-        if fname.find(w) >= 0:
+      	if fname.find(w) >= 0:
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting')
           return self.bandomain()
@@ -1425,14 +1446,15 @@ class bmsMilter(Milter.Base):
     return Milter.REJECT
 
   def bandomain(self):
-    if self.spf and self.spf.result == 'pass':
+    if self.spf and self.spf.result == 'pass' and not self.confidence:
       domain = self.canon_from.split('@')[-1]
-      if not domain in banned_domains:
-        try:
-          fp = open('banned_domains','at')
-          print >>fp,domain 
-        finally: fp.close()
-        banned_domains.add(domain)
+      if not isbanned(domain,banned_domains):
+	try:
+	  fp = open('banned_domains','at')
+	  print >>fp,domain 
+	finally: fp.close()
+	banned_domains.add(domain)
+        self.log('BAN DOMAIN:',domain)
     return Milter.REJECT
 
   def data(self):
@@ -1456,7 +1478,7 @@ class bmsMilter(Milter.Base):
     elif self.whitelist_sender:
       # check for AutoReplys
       if (lname == 'subject' and reautoreply.match(val)) \
-        or (lname == 'user-agent' and val.lower().startswith('vacation')):
+	or (lname == 'user-agent' and val.lower().startswith('vacation')):
           self.whitelist_sender = False
           self.log('AUTOREPLY: not whitelisted')
 
@@ -1548,7 +1570,7 @@ class bmsMilter(Milter.Base):
     except Exception,x:
       if not self.ioerr:
         self.ioerr = x
-        self.log(x)
+	self.log(x)
       self.fp = None
     return Milter.CONTINUE
 
@@ -1738,15 +1760,15 @@ class bmsMilter(Milter.Base):
         if self.spf and self.mailfrom != '<>':
           # check that sender accepts quarantine DSN
           self.fp.seek(0)
-          if self.spf.result == 'pass' or self.cbv_needed:
-            msg = mime.message_from_file(self.fp)
-            if self.spf.result == 'pass':
-              rc = self.send_dsn(self.spf,msg,'quarantine')
-            else:
-              rc = self.do_needed_cbv(msg)
-            del msg
-          else:
-            rc = self.send_dsn(self.spf)
+	  if self.spf.result == 'pass' or self.cbv_needed:
+	    msg = mime.message_from_file(self.fp)
+	    if self.spf.result == 'pass':
+	      rc = self.send_dsn(self.spf,msg,'quarantine')
+	    else:
+	      rc = self.do_needed_cbv(msg)
+	    del msg
+	  else:
+	    rc = self.send_dsn(self.spf)
           if rc != Milter.CONTINUE:
             self.fp = None
             return rc
@@ -1807,6 +1829,10 @@ class bmsMilter(Milter.Base):
       if self.mailfrom != '<>' and not self.cbv_needed:
         self.cbv_needed = (q,tname)
     elif policy != 'OK':
+      if policy == 'BAN':
+	self.offense(inc=3)
+      elif self.offenses:
+        self.offense()	 # multiple forged domains are extra evil
       return True
     return False
 
@@ -2078,7 +2104,6 @@ def main():
       milter_log.error('Unable to read: %s',access_file)
       return
   try:
-    from glob import glob
     global banned_ips
     banned_ips = set(addr2bin(ip) 
         for fn in glob('banned_ips*')
@@ -2086,6 +2111,16 @@ def main():
     print len(banned_ips),'banned ips'
   except:
     milter_log.exception('Error reading banned_ips')
+
+  try:
+    global banned_domains
+    banned_domains = set(dom.strip()
+	    for fn in glob('banned_domains*')
+	    for dom in open(fn))
+    print len(banned_domains),'banned domains'
+  except:
+    milter_log.exception('Error reading banned_domains')
+
   Milter.factory = bmsMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS
   if wiretap_dest or smart_alias or dspam_userdir:
