@@ -1,5 +1,5 @@
-VERS=milter-0.8.12
-V=milter-0_8_12
+VERS=milter-0.8.13
+V=milter-0_8_13
 
 tar:
 	cvs export -r $(V) -d $(VERS) milter

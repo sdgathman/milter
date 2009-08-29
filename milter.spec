@@ -3,7 +3,7 @@
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
 %define __python python2.4
-%define version 0.8.12
+%define version 0.8.13
 %define release 2%{?dist}.py24
 # what version of RH are we building for?
 %define redhat7 0

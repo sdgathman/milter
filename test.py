@@ -8,7 +8,6 @@ import os
 def suite(): 
   s = unittest.TestSuite()
   s.addTest(testbms.suite())
-  s.addTest(testmime.suite())
   s.addTest(testsample.suite())
   s.addTest(testutils.suite())
   return s
