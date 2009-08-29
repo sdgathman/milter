@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.145  2009/08/27 21:18:16  customdesigned
+# Track banned domains and expand the offenses that can ban an IP.
+#
 # Revision 1.141  2009/05/20 02:48:18  customdesigned
 # Restrict internal DSNs to official MTAs.
 #
@@ -1446,7 +1449,7 @@ class bmsMilter(Milter.Base):
     return Milter.REJECT
 
   def bandomain(self):
-    if self.spf and self.spf.result == 'pass' and not self.confidence:
+    if self.spf and self.spf.result == 'pass' and self.confidence == 0:
       domain = self.canon_from.split('@')[-1]
       if not isbanned(domain,banned_domains):
 	try:
