@@ -82,6 +82,11 @@ cat >$RPM_BUILD_ROOT/etc/logrotate.d/milter <<'EOF'
   daily
   copytruncate
 }
+/var/log/milter/banned_domains {
+  rotate 7
+  weekly
+  copytruncate
+}
 EOF
 
 # purge saved defanged message copies
@@ -95,7 +100,7 @@ cat >$RPM_BUILD_ROOT/etc/cron.daily/milter <<'EOF'
 #!/bin/sh
 
 find /var/log/milter/save -mtime +7 | xargs $R rm
-# work around memory leak
+# work around any memory leaks
 /etc/init.d/milter condrestart
 EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
