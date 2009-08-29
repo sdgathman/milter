@@ -11,6 +11,7 @@ import sys
 
 class TestMilter(bms.bmsMilter):
 
+  _protocol = 0
   def __init__(self):
     bms.bmsMilter.__init__(self)
     self.logfp = open("test/milter.log","a")
