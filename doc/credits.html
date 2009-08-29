@@ -1,0 +1,176 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<!-- THIS PAGE IS AUTOMATICALLY GENERATED.  DO NOT EDIT. -->
+<!-- Fri Jun  5 20:45:03 2009 -->
+<!-- USING HT2HTML 2.0 -->
+<!-- SEE http://ht2html.sf.net -->
+<!-- User-specified headers:
+Title: Credits
+
+-->
+
+<head>
+<title>Credits</title>
+<meta http-equiv="Content-Type" content="text/html; charset=us-ascii">
+<meta name="generator" content="HT2HTML/2.0">
+<style type="text/css">
+body { margin: 0px; }
+</style>
+</head>
+<body bgcolor="#ffffff" text="#000000"
+      marginwidth="0" marginheight="0"
+      link="#0000bb"  vlink="#551a8b"
+      alink="#ff0000">
+<!-- start of page table -->
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<tr><!-- start of sidebar/body row -->
+<!-- start of sidebar cells -->
+<td width="150" valign="top" bgcolor="#cdba96" class="sidebar">
+<!-- start of sidebar table -->
+<table width="100%" border="0" cellspacing="0" cellpadding="3"
+       bgcolor="#ffffff">
+<tr><td bgcolor="#b78900"><b><font color="#ffffff">
+Subsections
+</font></b></td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="milter.html">Introduction</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="changes.html">Changes</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="requirements.html">Requirements</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="RPM-GPG-KEY-bms">GPG-KEY</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="faq.html">FAQ</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="policy.html">Policies</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="logmsgs.html">Log&nbsp;Messages</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://bmsi.com/mailman/listinfo/pymilter">Mailing&nbsp;List</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<b>CREDITS</b>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://sourceforge.net"><img src="sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
+</td></tr>
+<tr><td bgcolor="#cdba96">&nbsp;
+<tr><td bgcolor="#b78900"><b><font color="#ffffff">
+Links
+</font></b></td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="https://www.milter.org/developers/api/index">C&nbsp;API</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://www.milter.org/">Milter.Org</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://www.python.org/">Python.Org</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://www.sendmail.org/">Sendmail.Org</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://www.openspf.org/">SPF</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://spidey2.bmsi.com/pymilter/">pymilter</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="pysrs.html">pysrs</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://bmsi.com/python/pygossip.html">pygossip</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://bmsi.com/python/dspam.html">pydspam</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://bmsi.com/libdspam/dspam.html">libdspam</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">&nbsp;
+<tr><td bgcolor="#b78900"><b><font color="#ffffff">
+Email Us
+</font></b></td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="mailto:webmaster@bmsi.com">webmaster@bmsi.com</a>
+</td></tr>
+</table><!-- end of sidebar table -->
+
+</td>
+<td width="15">&nbsp;&nbsp;</td><!--spacer-->
+<!-- end of sidebar cell -->
+<!-- start of body cell -->
+<td valign="top" width="90%" class="body"><br>
+<h1> CREDITS </h1>
+
+<a href="mailto:Jim Niemira <urmane@urmane.org>">Jim Niemira</a>
+wrote the original C module and some quick
+and dirty python to use it.  
+<a href="http://gathman.org/vitae">Stuart D. Gathman</a>
+took that kludge and added threading and context objects to it, wrote a proper
+OO wrapper (Milter.py) that handles attachments, did lots of testing, packaged
+it with distutils, and generally transformed it from a quick hack to a
+real, usable Python extension.
+
+<h2>Other contributors (in random order):</h2>
+
+<dl>
+<dt> <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
+  <dd>for the pymilter mascot image of 
+  <a href="http://maxwelld.netfirms.com/">
+  Maxwell's daemon</a>
+<dt>Stephen Figgins
+  <dd>for reporting problems building with sendmail-8.12, and when
+  building milter.so for the first time.
+<dt>Dave MacQuigg 
+  <dd>for noticing that smfi_insheader wasn't supported, and creating
+  a template to help first time pymilter users create their own milter.
+<dt>Terence Way
+  <dd>for providing a Python port of SPF
+<dt>Scott Kitterman
+  <dd>for doing lots of testing and debugging of SPF against draft standard,
+  and for putting up a <a href="http://www.kitterman.com/spf/validate.html">
+  web page that validates SPF</a> records using spf.py
+<dt>Alexander Kourakos
+  <dd>for plugging several memory leaks
+<dt>George Graf at Vienna University of Economics and Business Administration
+  <dd>for handling None passed to setreply and chgheader.
+<dt>Deron Meranda
+  <dd>for IPv6 patches
+<dt>Jason Erikson
+  <dd>for handling NULL hostaddr in connect callback.
+<dt>John Draper
+  <dd>for porting Python milter to OpenBSD, and starting to work on tutorials
+  then pointing out that it would be easier to just write the MTA in Python.
+<dt>Eric S. Johansson
+  <dd>for helpful design discussions while working on camram
+<dt>Alex Savguira
+  <dd>for finding bugs with international headers and
+  suggesting the scan_zip option.
+<dt><a href="http://www.bmsi.com">Business Management Systems</a>
+  <dd>for hosting the website, and providing paying clients who need milter
+  service so I can work on it as part of my day job.
+</dl>
+
+If I have left anybody out, send me a reminder: 
+<a href="mailto:Stuart Gathman <stuart@bmsi.com>">stuart@bmsi.com</a>
+
+</td><!-- end of body cell -->
+</tr><!-- end of sidebar/body row -->
+</table><!-- end of page table -->
+</body></html>
