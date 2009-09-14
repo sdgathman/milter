@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.147  2009/09/14 14:24:11  customdesigned
+# Trust 127.0.0.1 not to be a zombie
+#
 # Revision 1.146  2009/08/29 03:38:27  customdesigned
 # Don't ban domains unless gossip score available.
 #
@@ -682,6 +685,7 @@ def isbanned(dom,s):
   if len(a) < 3: return False
   a[0] = '*'
   return isbanned('.'.join(a),s)
+RE_MULTIMX = re.compile(r'^(mail|smtp|mx)[1-9][.]')
 
 class bmsMilter(Milter.Base):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
@@ -1457,6 +1461,13 @@ class bmsMilter(Milter.Base):
     if self.spf and self.spf.result == 'pass' and self.confidence == 0:
       domain = self.canon_from.split('@')[-1]
       if not isbanned(domain,banned_domains):
+	m = RE_MULTIMX.match(domain)
+	if m:
+	  orig = domain
+	  domain = '*.' + domain[m.end():]
+	  self.log('BAN DOMAIN:',orig,'->',domain)
+	else:
+	  self.log('BAN DOMAIN:',domain)
 	try:
 	  fp = open('banned_domains','at')
 	  print >>fp,domain 
