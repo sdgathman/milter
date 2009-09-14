@@ -212,7 +212,7 @@ class spfMilter(Milter.Base):
       if policy and policy == 'REJECT':
         self.log('REJECT NEUTRAL:',q.s)
 	self.setreply('550','5.7.1',
-  "%s requires and SPF PASS to accept mail from %s. [http://openspf.org]"
+  "%s requires an SPF PASS to accept mail from %s. [http://openspf.org]"
 	  % (receiver,q.s))
 	return Milter.REJECT
     elif res == 'pass':

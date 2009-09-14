@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.146  2009/08/29 03:38:27  customdesigned
+# Don't ban domains unless gossip score available.
+#
 # Revision 1.145  2009/08/27 21:18:16  customdesigned
 # Track banned domains and expand the offenses that can ban an IP.
 #
@@ -910,6 +913,8 @@ class bmsMilter(Milter.Base):
           p.close()
         else:
           policy = None
+          # trust ourself not to be a zombie
+          if self.connectip.strip() == '127.0.0.1': policy = 'OK'
         if policy:
           if policy != 'OK':
             self.log("REJECT: unauthorized user",self.user,
@@ -1759,7 +1764,7 @@ class bmsMilter(Milter.Base):
           self.setreply('550','5.7.1','Your Message looks spammy')
           self.fp = None
           return Milter.REJECT
-        self.log("DSPAM:",screener,"SCREENED")
+        self.log("DSPAM:",screener,"SCREENED %f" % ds.probability)
         if self.spf and self.mailfrom != '<>':
           # check that sender accepts quarantine DSN
           self.fp.seek(0)
