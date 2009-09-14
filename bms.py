@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.148  2009/09/14 14:28:22  customdesigned
+# Heuristically recognize multiple MXs.
+#
 # Revision 1.147  2009/09/14 14:24:11  customdesigned
 # Trust 127.0.0.1 not to be a zombie
 #
@@ -763,15 +766,18 @@ class bmsMilter(Milter.Base):
   def hello(self,hostname):
     self.hello_name = hostname
     self.log("hello from %s" % hostname)
-    if ip4re.match(hostname):
-      self.log("REJECT: numeric hello name:",hostname)
-      self.setreply('550','5.7.1','hello name cannot be numeric ip')
-      return Milter.REJECT
-    if not self.internal_connection and hostname in hello_blacklist:
-      self.log("REJECT: spam from self:",hostname)
-      self.setreply('550','5.7.1',
-        'Your mail server lies.  Its name is *not* %s.' % hostname)
-      return self.offense(inc=4)
+    if not self.internal_connection:
+      # Allow illegal HELO from internal network, some email enabled copier/fax
+      # type devices (Toshiba) have broken firmware.
+      if ip4re.match(hostname):
+        self.log("REJECT: numeric hello name:",hostname)
+        self.setreply('550','5.7.1','hello name cannot be numeric ip')
+        return Milter.REJECT
+      if hostname in hello_blacklist:
+        self.log("REJECT: spam from self:",hostname)
+        self.setreply('550','5.7.1',
+          'Your mail server lies.  Its name is *not* %s.' % hostname)
+        return self.offense(inc=4)
     if hostname == 'GC':
       n = gc.collect()
       self.log("gc:",n,' unreachable objects')
