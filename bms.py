@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.149  2009/09/14 14:59:53  customdesigned
+# Allow illegal HELO from internal to accomodate broken copier firmware.
+#
 # Revision 1.148  2009/09/14 14:28:22  customdesigned
 # Heuristically recognize multiple MXs.
 #
@@ -1479,7 +1482,6 @@ class bmsMilter(Milter.Base):
 	  print >>fp,domain 
 	finally: fp.close()
 	banned_domains.add(domain)
-        self.log('BAN DOMAIN:',domain)
     return Milter.REJECT
 
   def data(self):

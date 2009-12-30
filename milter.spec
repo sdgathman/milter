@@ -4,7 +4,7 @@
 
 %define __python python2.4
 %define version 0.8.13
-%define release 2%{?dist}.py24
+%define release 3%{?dist}.py24
 # what version of RH are we building for?
 %define redhat7 0
 
@@ -34,7 +34,7 @@ BuildRoot: %{_tmppath}/%{name}-buildroot
 BuildArch: noarch
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{__python} >= 2.4, pyspf >= 2.0.4, pymilter
+Requires: %{__python} >= 2.4, pyspf >= 2.0.4, pymilter >= 0.9.3
 %ifos Linux
 Requires: chkconfig
 %endif
@@ -47,7 +47,7 @@ bayesian filtering.
 %package spf
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Requires: pyspf >= 2.0.4, pymilter
+Requires: pyspf >= 2.0.4, pymilter >= 0.9.3
 Obsoletes: pymilter-spf < 0.8.10
 
 %description spf
@@ -61,9 +61,8 @@ tailored by domain.
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/var/log/milter
 mkdir -p $RPM_BUILD_ROOT/etc/mail
-mkdir $RPM_BUILD_ROOT/var/log/milter/save
+mkdir -p $RPM_BUILD_ROOT/var/log/milter/save
 mkdir -p $RPM_BUILD_ROOT%{libdir}
 cp *.txt $RPM_BUILD_ROOT/var/log/milter
 cp -p bms.py spfmilter.py ban2zone.py $RPM_BUILD_ROOT%{libdir}
@@ -167,7 +166,6 @@ fi
 /etc/rc.d/init.d/milter
 %defattr(-,mail,mail)
 %endif
-%dir /var/log/milter
 %dir /var/log/milter/save
 %{libdir}/bms.py
 %{libdir}/ban2zone.py
@@ -183,7 +181,6 @@ fi
 
 %files spf
 %defattr(-,root,root)
-%dir /var/log/milter
 %{libdir}/spfmilter.py*
 %config(noreplace) /etc/mail/spfmilter.cfg
 /etc/rc.d/init.d/spfmilter
