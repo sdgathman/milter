@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.150  2009/12/30 20:53:20  customdesigned
+# Require pymilter >= 0.9.3
+#
 # Revision 1.149  2009/09/14 14:59:53  customdesigned
 # Allow illegal HELO from internal to accomodate broken copier firmware.
 #
@@ -451,9 +454,9 @@ def read_config(list):
   scan_html = cp.getboolean(section,'scan_html')
   block_chinese = cp.getboolean(section,'block_chinese')
   block_forward = cp.getaddrset(section,'block_forward')
-  porn_words = cp.getlist(section,'porn_words')
-  spam_words = cp.getlist(section,'spam_words')
-  from_words = cp.getlist(section,'from_words')
+  porn_words = [x for x in cp.getlist(section,'porn_words') if len(x) > 1]
+  spam_words = [x for x in cp.getlist(section,'spam_words') if len(x) > 1]
+  from_words = [x for x in cp.getlist(section,'from_words') if len(x) > 1]
 
   # scrub section
   global hide_path, reject_virus_from, internal_policy
@@ -1409,7 +1412,7 @@ class bmsMilter(Milter.Base):
           # if confirmed by finding our signed Message-ID, 
           # original sender (encoded in Message-ID) is blacklisted
 
-    elif lname == 'from':
+    elif lname == 'from' and self.dspam:
       fname,email = parseaddr(val)
       for w in spam_words:
       	if fname.find(w) >= 0:
