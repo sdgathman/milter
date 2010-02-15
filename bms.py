@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.151  2009/12/31 19:23:18  customdesigned
+# Don't check From unless dspam enabled.
+#
 # Revision 1.150  2009/12/30 20:53:20  customdesigned
 # Require pymilter >= 0.9.3
 #
@@ -694,7 +697,7 @@ def isbanned(dom,s):
   if len(a) < 3: return False
   a[0] = '*'
   return isbanned('.'.join(a),s)
-RE_MULTIMX = re.compile(r'^(mail|smtp|mx)[1-9][.]')
+RE_MULTIMX = re.compile(r'^(mail|smtp|mx)[0-9]{1,3}[.]')
 
 class bmsMilter(Milter.Base):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
@@ -1072,7 +1075,7 @@ class bmsMilter(Milter.Base):
               self.setreply('550','5.7.1',
                 'Your domain has been sending nothing but spam')
               return Milter.REJECT
-            if self.reputation > 40 and self.confidence > 1:
+            if self.reputation > 40 and self.confidence > 0:
               self.greylist = False
         except:
           gossip = None
