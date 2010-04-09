@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.153  2010/04/09 18:23:34  customdesigned
+# Don't ban just for repeated anonymous MFROM
+#
 # Revision 1.152  2010/02/15 21:02:29  customdesigned
 # Lower reputation bar to avoid greylisting.
 #
@@ -1478,7 +1481,7 @@ class bmsMilter(Milter.Base):
     return Milter.REJECT
 
   def bandomain(self):
-    if self.spf and self.spf.result == 'pass' and self.confidence == 0:
+    if self.spf and self.spf_guess == 'pass' and self.confidence == 0:
       domain = self.canon_from.split('@')[-1]
       if not isbanned(domain,banned_domains):
 	m = RE_MULTIMX.match(domain)
@@ -1728,7 +1731,7 @@ class bmsMilter(Milter.Base):
                     return False
                   if self.spf and self.mailfrom != '<>':
                     # check that sender accepts quarantine DSN
-                    if self.spf.result == 'pass':
+                    if self.spf_guess == 'pass':
                       msg = mime.message_from_file(StringIO.StringIO(txt))
                       rc = self.send_dsn(self.spf,msg,'quarantine')
                       del msg
@@ -1798,9 +1801,9 @@ class bmsMilter(Milter.Base):
         if self.spf and self.mailfrom != '<>':
           # check that sender accepts quarantine DSN
           self.fp.seek(0)
-	  if self.spf.result == 'pass' or self.cbv_needed:
+	  if self.spf_guess == 'pass' or self.cbv_needed:
 	    msg = mime.message_from_file(self.fp)
-	    if self.spf.result == 'pass':
+	    if self.spf_guess == 'pass':
 	      rc = self.send_dsn(self.spf,msg,'quarantine')
 	    else:
 	      rc = self.do_needed_cbv(msg)
