@@ -7,7 +7,7 @@ This is an automatically generated Delivery Status Notification.
 
 *** WARNING! YOU ARE SENDING FROM AN UNAUTHORIZED LOCATION ***
 
-The email administrator for '%(sender_domain)' (YOUR administrator)
+The email administrator for '%(sender_domain)s' (YOUR administrator)
 has FORBIDDEN you to send email from this location.  IMMEDIATELY contact your
 email administrator and follow his instructions to properly send mail.
 
