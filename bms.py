@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.152  2010/02/15 21:02:29  customdesigned
+# Lower reputation bar to avoid greylisting.
+#
 # Revision 1.151  2009/12/31 19:23:18  customdesigned
 # Don't check From unless dspam enabled.
 #
@@ -823,8 +826,10 @@ class bmsMilter(Milter.Base):
           for t in smart_alias[key]:
             self.add_recipient('<%s>'%t)
 
-  def offense(self,inc=1):
+  def offense(self,inc=1,min=0):
     self.offenses += inc
+    if self.offenses < min:
+      self.offenses = min
     if self.offenses > 3 and not self.trusted_relay:
       try:
         ip = addr2bin(self.connectip)
@@ -1166,7 +1171,7 @@ class bmsMilter(Milter.Base):
         res = 'none'
         policy = p.getNonePolicy()
         if policy in ('CBV','DSN'):
-          self.offense(inc=2)    # ban ip if any bad recipient
+          self.offense(inc=0,min=2)    # ban ip if any bad recipient
         self.need_cbv(policy,q,'strike3')
         # REJECT delayed until after checking whitelist
     if res in ('deny', 'fail'):
