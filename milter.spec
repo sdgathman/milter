@@ -3,29 +3,14 @@
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
 %define __python python2.4
-%define version 0.8.13
-%define release 3%{?dist}.py24
-# what version of RH are we building for?
-%define redhat7 0
-
-%if %{redhat7} 
-# Redhat 7.x and earlier (multiple ps lines per thread)
-%define sysvinit milter.rc7
-%else	
 %define sysvinit milter.rc
-%endif
-# RH9, other systems (single ps line per process)
-%ifos aix4.1
-%define libdir /var/log/milter
-%else
 %define libdir %{_libdir}/pymilter
-%endif
 
 Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Version: %{version}
-Release: %{release}
+Version: 0.8.13
+Release: 1%{dist}.py24
 Source: milter-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
 License: GPLv2+
@@ -189,6 +174,14 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Sat Apr 10 2010 Stuart Gathman <stuart@bmsi.com> 0.8.14-1
+- ignore zero length keywords - a disastrous typo
+- ban generic domains for common subdomains
+- allow illegal HELO from internal network for braindead copiers
+- don't ban for multiple anonymous MFROM
+- trust localhost not to be a zombie - sendmail sends from queue on localhost
+- ban domains on best_guess pass
+
 * Fri Aug 28 2009 Stuart Gathman <stuart@bmsi.com> 0.8.13-1
 - Default internal_policy off
 - Experimental banned domain list
