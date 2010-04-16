@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.154  2010/04/09 18:37:53  customdesigned
+# Best guess pass is good enough to get quarrantine DSN or get banned.
+#
 # Revision 1.153  2010/04/09 18:23:34  customdesigned
 # Don't ban just for repeated anonymous MFROM
 #
@@ -398,6 +401,8 @@ timeout = 600
 banned_ips = set()
 banned_domains = set()
 greylist = None
+UNLIMITED = 0x7fffffff
+max_demerits = UNLIMITED
 
 logging.basicConfig(
         stream=sys.stdout,
@@ -435,7 +440,7 @@ def read_config(list):
   tempfile.tempdir = cp.get('milter','tempdir')
   global socketname, timeout, check_user, log_headers
   global internal_connect, internal_domains, trusted_relay, hello_blacklist
-  global case_sensitive_localpart, private_relay, internal_mta
+  global case_sensitive_localpart, private_relay, internal_mta, max_demerits
   socketname = cp.get('milter','socket')
   timeout = cp.getintdefault('milter','timeout',600)
   check_user = cp.getaddrset('milter','check_user')
@@ -447,6 +452,7 @@ def read_config(list):
   internal_mta = cp.getlist('milter','internal_mta')
   hello_blacklist = cp.getlist('milter','hello_blacklist')
   case_sensitive_localpart = cp.getboolean('milter','case_sensitive_localpart')
+  max_demerits = cp.getintdefault('milter','max_demerits',UNLIMITED)
 
   # defang section
   global scan_rfc822, scan_html, block_chinese, scan_zip, block_forward
@@ -833,7 +839,7 @@ class bmsMilter(Milter.Base):
     self.offenses += inc
     if self.offenses < min:
       self.offenses = min
-    if self.offenses > 3 and not self.trusted_relay:
+    if self.offenses > max_demerits and not self.trusted_relay:
       try:
         ip = addr2bin(self.connectip)
         if ip not in banned_ips:
