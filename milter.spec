@@ -10,7 +10,7 @@ Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
 Version: 0.8.14
-Release: 1%{dist}.py24
+Release: 2%{dist}.py24
 Source: milter-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
 License: GPLv2+
