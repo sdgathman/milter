@@ -174,6 +174,9 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Sat Apr 10 2010 Stuart Gathman <stuart@bmsi.com> 0.8.14-2
+- Default ip banning off
+
 * Sat Apr 10 2010 Stuart Gathman <stuart@bmsi.com> 0.8.14-1
 - ignore zero length keywords - a disastrous typo
 - ban generic domains for common subdomains
