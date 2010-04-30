@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.155  2010/04/16 19:51:05  customdesigned
+# Max_demerits config to disable banning ips.
+#
 # Revision 1.154  2010/04/09 18:37:53  customdesigned
 # Best guess pass is good enough to get quarrantine DSN or get banned.
 #
@@ -872,7 +875,8 @@ class bmsMilter(Milter.Base):
     self.data_allowed = True
     self.delayed_failure = None
     self.trust_received = self.trusted_relay
-    self.trust_spf = self.trusted_relay
+    self.trust_spf = self.trusted_relay or self.internal_connection
+    self.external_spf = None
     self.redirect_list = []
     self.discard_list = []
     self.new_headers = []
@@ -996,7 +1000,7 @@ class bmsMilter(Milter.Base):
         return rc
       self.greylist = True
     else:
-      if internal_policy and self.internal_connection:
+      if spf and internal_policy and self.internal_connection:
         q = spf.query(self.connectip,self.canon_from,self.hello_name,
                 receiver=self.receiver,strict=False)
         q.result = 'pass'
@@ -1010,7 +1014,6 @@ class bmsMilter(Milter.Base):
           )
           return Milter.REJECT
       rc = Milter.CONTINUE
-    # FIXME: parse Received-SPF from trusted_relay for SPF result
     res = self.spf and self.spf_guess
     hres = self.spf and self.spf_helo
     # Check whitelist and blacklist
@@ -1488,7 +1491,7 @@ class bmsMilter(Milter.Base):
 
   def bandomain(self):
     if self.spf and self.spf_guess == 'pass' and self.confidence == 0:
-      domain = self.canon_from.split('@')[-1]
+      domain = self.spf.o
       if not isbanned(domain,banned_domains):
 	m = RE_MULTIMX.match(domain)
 	if m:
@@ -1534,9 +1537,11 @@ class bmsMilter(Milter.Base):
       self.log('%s: %s' % (name,val))
     elif self.trust_received and lname == 'received':
       self.trust_received = False
+      self.trust_spf = False
       self.log('%s: %s' % (name,val.splitlines()[0]))
     elif self.trust_spf and lname == 'received-spf':
       self.trust_spf = False
+      self.external_spf = val
       self.log('%s: %s' % (name,val.splitlines()[0]))
     if self.fp:
       try:
@@ -1696,6 +1701,14 @@ class bmsMilter(Milter.Base):
           try:
             self.fp.seek(0)
             txt = self.fp.read()
+            if user == 'bandom' and self.internal_connection:
+              if spf and self.external_spf:
+                self.spf = spf.query('','','')
+                self.spf_guess = self.spf.parse_header(self.external_spf)
+                if self.spf_guess == 'pass':
+		  self.confidence = 0	# ban regardless of reputation status
+                  self.bandomain()
+              user = 'spam'
             if user == 'spam' and self.internal_connection:
               sender = dspam_users.get(self.canon_from)
               if sender:
