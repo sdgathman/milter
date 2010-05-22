@@ -1489,7 +1489,7 @@ class bmsMilter(Milter.Base):
       )
     return Milter.REJECT
 
-  def bandomain(self):
+  def bandomain(self,wild=0):
     if self.spf and self.spf_guess == 'pass' and self.confidence == 0:
       domain = self.spf.o
       if not isbanned(domain,banned_domains):
@@ -1499,6 +1499,9 @@ class bmsMilter(Milter.Base):
 	  domain = '*.' + domain[m.end():]
 	  self.log('BAN DOMAIN:',orig,'->',domain)
 	else:
+	  if wild:
+	    a = domain.split('.')[wild:]
+	    if a: domain = '*.'+'.'.join(a)
 	  self.log('BAN DOMAIN:',domain)
 	try:
 	  fp = open('banned_domains','at')
@@ -1703,11 +1706,15 @@ class bmsMilter(Milter.Base):
             txt = self.fp.read()
             if user == 'bandom' and self.internal_connection:
               if spf and self.external_spf:
-                self.spf = spf.query('','','')
-                self.spf_guess = self.spf.parse_header(self.external_spf)
-                if self.spf_guess == 'pass':
+                q = spf.query('','','')
+                p = q.parse_header(self.external_spf)
+		self.spf_guess = p.get('bestguess',q.result)
+		self.log("External SPF:",self.spf_guess)
+		self.spf = q
+                if self.spf_guess == 'pass' or q.result == 'none':
 		  self.confidence = 0	# ban regardless of reputation status
-                  self.bandomain()
+		  s = rcpt.split('@')[0][-1]
+                  self.bandomain(wild=s.isdigit() and int(s))
               user = 'spam'
             if user == 'spam' and self.internal_connection:
               sender = dspam_users.get(self.canon_from)
