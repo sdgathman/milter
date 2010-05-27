@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.157  2010/05/22 03:57:17  customdesigned
+# Bandomain aliases to ban wildcards.
+#
 # Revision 1.155  2010/04/16 19:51:05  customdesigned
 # Max_demerits config to disable banning ips.
 #
@@ -1139,7 +1142,18 @@ class bmsMilter(Milter.Base):
         hres,hcode,htxt = h.check()
         # FIXME: in a few cases, rejecting on HELO neutral causes problems
         # for senders forced to use their braindead ISPs email service.
-        if hres in ('deny','fail','neutral','softfail'):
+        policy = p.getPolicy('helo-%s:'%hres)
+        if not policy:
+          if hres in ('deny','fail','neutral','softfail'):
+            # Even the most idiotic admin that uses non-existent domains
+            # for helo is not going to forge 'gmail.com'.  So ban the IP too.
+            if self.hello_name == 'gmail.com':
+              policy = 'BAN'
+            else:
+              policy = 'REJECT'
+          else:
+            policy = 'OK'
+        if self.need_cbv(policy,q,'heloerror'):
           self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
           self.setreply('550','5.7.1',htxt,
             "The hostname given in your MTA's HELO response is not listed",
@@ -1147,10 +1161,6 @@ class bmsMilter(Milter.Base):
             "get this bounce, the message was not in fact a forgery, and you",
             "should IMMEDIATELY notify your email administrator of the problem."
           )
-          # Even the most idiotic admin that uses non-existent domains
-          # for helo is not going to forge 'gmail.com'.  So ban the IP too.
-	  if self.hello_name == 'gmail.com':
-	    self.offense(inc=4)
           return Milter.REJECT
         if hres == 'none' and spf_best_guess \
           and not dynip(self.hello_name,self.connectip):
