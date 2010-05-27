@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.158  2010/05/27 18:23:33  customdesigned
+# Support HELO policies.
+#
 # Revision 1.157  2010/05/22 03:57:17  customdesigned
 # Bandomain aliases to ban wildcards.
 #
@@ -1142,7 +1145,8 @@ class bmsMilter(Milter.Base):
         hres,hcode,htxt = h.check()
         # FIXME: in a few cases, rejecting on HELO neutral causes problems
         # for senders forced to use their braindead ISPs email service.
-        policy = p.getPolicy('helo-%s:'%hres)
+        hp = SPFPolicy(self.hello_name)
+        policy = hp.getPolicy('helo-%s:'%hres)
         if not policy:
           if hres in ('deny','fail','neutral','softfail'):
             # Even the most idiotic admin that uses non-existent domains
