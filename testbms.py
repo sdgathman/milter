@@ -297,6 +297,14 @@ From: postmaster@mail.example.com
     ))
     self.assertEqual(sndr,'foo@bar.com')
 
+  def testBanned(self):
+    bd = set(('*.foo.bar','*.info','baz.bar'))
+    self.assertTrue(bms.isbanned('bif.foo.bar',bd))
+    self.assertFalse(bms.isbanned('bif.foo.com',bd))
+    self.assertTrue(bms.isbanned('foo.info',bd))
+    self.assertFalse(bms.isbanned('foo.baz.bar',bd))
+    self.assertTrue(bms.isbanned('baz.bar',bd))
+
 #  def testReject(self):
 #    "Test content based spam rejection."
 #    milter = TestMilter()

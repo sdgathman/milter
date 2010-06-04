@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.159  2010/05/27 21:22:41  customdesigned
+# Fix helo policy lookup
+#
 # Revision 1.158  2010/05/27 18:23:33  customdesigned
 # Support HELO policies.
 #
@@ -715,7 +718,7 @@ def isbanned(dom,s):
   if dom in s: return True
   a = dom.split('.')
   if a[0] == '*': a = a[1:]
-  if len(a) < 3: return False
+  if len(a) < 2: return False
   a[0] = '*'
   return isbanned('.'.join(a),s)
 RE_MULTIMX = re.compile(r'^(mail|smtp|mx)[0-9]{1,3}[.]')
