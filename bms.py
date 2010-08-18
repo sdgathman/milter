@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.160  2010/06/04 03:50:28  customdesigned
+# Allow wildcards just above TLD.
+#
 # Revision 1.159  2010/05/27 21:22:41  customdesigned
 # Fix helo policy lookup
 #
@@ -1066,10 +1069,14 @@ class bmsMilter(Milter.Base):
     "and no SPF record."
           )
           return self.offense() # ban ip if too many bad MFROMs
+      if domain and rc == Milter.CONTINUE \
+	  and not (self.internal_connection or self.trusted_relay):
+	rc = self.create_gossip(domain,res)
+    return rc
+
+  def create_gossip(self,domain,res,hres):
       global gossip
-      if gossip and domain and rc == Milter.CONTINUE \
-          and not (self.internal_connection or self.trusted_relay) \
-          and gossip_node:
+      if gossip and gossip_node:
         if self.spf and self.spf.result == 'pass':
           qual = 'SPF'
         elif res == 'pass':
@@ -1106,7 +1113,7 @@ class bmsMilter(Milter.Base):
         except:
           gossip = None
           raise
-    return rc
+    return Milter.CONTINUE
 
   def check_spf(self):
     receiver = self.receiver
@@ -1698,6 +1705,10 @@ class bmsMilter(Milter.Base):
     if gh:
       self.log('X-GOSSiP:',gh)
       self.umis,_ = gh.split(',',1)
+    elif self.spf:
+      domain = self.spf.o
+      if domain:
+	self.create_gossip(domain,self.spf_guess,self.spf_helo)
 
   # check spaminess for recipients in dictionary groups
   # if there are multiple users getting dspammed, then
@@ -1721,13 +1732,19 @@ class bmsMilter(Milter.Base):
           try:
             self.fp.seek(0)
             txt = self.fp.read()
-            if user == 'bandom' and self.internal_connection:
+            if user in ('bandom','spam','falsepositive') \
+                and self.internal_connection:
               if spf and self.external_spf:
                 q = spf.query('','','')
                 p = q.parse_header(self.external_spf)
 		self.spf_guess = p.get('bestguess',q.result)
+		self.spf_helo = p.get('helo',None)
 		self.log("External SPF:",self.spf_guess)
 		self.spf = q
+              else:
+                self.spf = None
+            if user == 'bandom' and self.internal_connection:
+	      if self.spf:
                 if self.spf_guess == 'pass' or q.result == 'none':
 		  self.confidence = 0	# ban regardless of reputation status
 		  s = rcpt.split('@')[0][-1]
