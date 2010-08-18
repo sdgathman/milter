@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.161  2010/08/18 03:52:09  customdesigned
+# Update reputation of parsed Received-SPF header if no Gossip header.
+#
 # Revision 1.160  2010/06/04 03:50:28  customdesigned
 # Allow wildcards just above TLD.
 #
@@ -1071,48 +1074,48 @@ class bmsMilter(Milter.Base):
           return self.offense() # ban ip if too many bad MFROMs
       if domain and rc == Milter.CONTINUE \
 	  and not (self.internal_connection or self.trusted_relay):
-	rc = self.create_gossip(domain,res)
+	rc = self.create_gossip(domain,res,hres)
     return rc
 
   def create_gossip(self,domain,res,hres):
-      global gossip
-      if gossip and gossip_node:
-        if self.spf and self.spf.result == 'pass':
-          qual = 'SPF'
-        elif res == 'pass':
-          qual = 'GUESS'
-        elif hres == 'pass':
-          qual = 'HELO'
-          domain = self.spf.h
-        else:   
-          # No good identity: blame purported domain.  Qualify by SPF
-          # result so NEUTRAL will get separate reputation from SOFTFAIL.
-          qual = res
-        try:
-          umis = gossip.umis(domain+qual,self.id+time.time())
-          res = gossip_node.query(umis,domain,qual,1)
-          if res:
-            res,hdr,val = res
-            self.add_header(hdr,val)
-            a = val.split(',')
-            self.reputation = int(a[-2])
-            self.confidence = int(a[-1])
-            self.umis = umis
-            self.from_domain = domain
-            # We would like to reject on bad reputation here, but we
-            # need to give special consideration to postmaster.  So
-            # we have to wait until envrcpt().  Perhaps an especially
-            # bad reputation could be rejected here.
-            if self.reputation < -70 and self.confidence > 5:
-              self.log('REJECT: REPUTATION')
-              self.setreply('550','5.7.1',
-                'Your domain has been sending nothing but spam')
-              return Milter.REJECT
-            if self.reputation > 40 and self.confidence > 0:
-              self.greylist = False
-        except:
-          gossip = None
-          raise
+    global gossip
+    if gossip and gossip_node:
+      if self.spf and self.spf.result == 'pass':
+	qual = 'SPF'
+      elif res == 'pass':
+	qual = 'GUESS'
+      elif hres == 'pass':
+	qual = 'HELO'
+	domain = self.spf.h
+      else:   
+	# No good identity: blame purported domain.  Qualify by SPF
+	# result so NEUTRAL will get separate reputation from SOFTFAIL.
+	qual = res
+      try:
+	umis = gossip.umis(domain+qual,self.id+time.time())
+	res = gossip_node.query(umis,domain,qual,1)
+	if res:
+	  res,hdr,val = res
+	  self.add_header(hdr,val)
+	  a = val.split(',')
+	  self.reputation = int(a[-2])
+	  self.confidence = int(a[-1])
+	  self.umis = umis
+	  self.from_domain = domain
+	  # We would like to reject on bad reputation here, but we
+	  # need to give special consideration to postmaster.  So
+	  # we have to wait until envrcpt().  Perhaps an especially
+	  # bad reputation could be rejected here.
+	  if self.reputation < -70 and self.confidence > 5:
+	    self.log('REJECT: REPUTATION')
+	    self.setreply('550','5.7.1',
+	      'Your domain has been sending nothing but spam')
+	    return Milter.REJECT
+	  if self.reputation > 40 and self.confidence > 0:
+	    self.greylist = False
+      except:
+	gossip = None
+	raise
     return Milter.CONTINUE
 
   def check_spf(self):
