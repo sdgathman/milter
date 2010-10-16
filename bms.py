@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.162  2010/08/18 03:58:06  customdesigned
+# Fix typos
+#
 # Revision 1.161  2010/08/18 03:52:09  customdesigned
 # Update reputation of parsed Received-SPF header if no Gossip header.
 #
@@ -177,108 +180,10 @@
 # Revision 1.100  2007/03/24 00:30:24  customdesigned
 # Do not CBV for internal domains.
 #
-# Revision 1.99  2007/03/23 22:39:10  customdesigned
-# Get SMTP-Auth policy from access_file.
-#
-# Revision 1.98  2007/03/21 04:02:13  customdesigned
-# Properly log From: and Sender:
-#
-# Revision 1.97  2007/03/18 02:32:21  customdesigned
-# Gossip configuration options: client or standalone with optional peers.
-#
-# Revision 1.96  2007/03/17 21:22:48  customdesigned
-# New delayed DSN pattern.  Retab (expandtab).
-#
-# Revision 1.95  2007/03/03 19:18:57  customdesigned
-# Fix continuing findsrs when srs.reverse fails.
-#
-# Revision 1.94  2007/03/03 18:46:26  customdesigned
-# Improve delayed failure detection.
-#
-# Revision 1.93  2007/02/07 23:21:26  customdesigned
-# Use re for auto-reply recognition.
-#
-# Revision 1.92  2007/01/26 03:47:23  customdesigned
-# Handle null in header value.
-#
-# Revision 1.91  2007/01/25 22:47:25  customdesigned
-# Persist blacklisting from delayed DSNs.
-#
-# Revision 1.90  2007/01/23 19:46:20  customdesigned
-# Add private relay.
-#
-# Revision 1.89  2007/01/22 02:46:01  customdesigned
-# Convert tabs to spaces.
-#
-# Revision 1.88  2007/01/19 23:31:38  customdesigned
-# Move parse_header to Milter.utils.
-# Test case for delayed DSN parsing.
-# Fix plock when source missing or cannot set owner/group.
-#
-# Revision 1.87  2007/01/18 16:48:44  customdesigned
-# Doc update.
-# Parse From header for delayed failure detection.
-# Don't check reputation of trusted host.
-# Track IP reputation only when missing PTR.
-#
-# Revision 1.86  2007/01/16 05:17:29  customdesigned
-# REJECT after data for blacklisted emails - so in case of mistakes, a
-# legitimate sender will know what happened.
-#
-# Revision 1.85  2007/01/11 04:31:26  customdesigned
-# Negative feedback for bad headers.  Purge cache logs on startup.
-#
-# Revision 1.84  2007/01/10 04:44:25  customdesigned
-# Documentation updates.
-#
-# Revision 1.83  2007/01/08 23:20:54  customdesigned
-# Get user feedback.
-#
-# Revision 1.82  2007/01/06 04:21:30  customdesigned
-# Add config file to spfmilter
-#
-# Revision 1.81  2007/01/05 23:33:55  customdesigned
-# Make blacklist an AddrCache
-#
-# Revision 1.80  2007/01/05 23:12:12  customdesigned
-# Move parse_addr, iniplist, ip4re to Milter.utils
-#
-# Revision 1.79  2007/01/05 21:25:40  customdesigned
-# Move AddrCache to Milter package.
-#
-# Revision 1.78  2007/01/04 18:01:10  customdesigned
-# Do plain CBV when template missing.
-#
-# Revision 1.77  2006/12/31 03:07:20  customdesigned
-# Use HELO identity if good when MAILFROM is bad.
-#
-# Revision 1.76  2006/12/30 18:58:53  customdesigned
-# Skip reputation/whitelist/blacklist when rejecting on SPF.  Add X-Hello-SPF.
-#
-# Revision 1.75  2006/12/28 01:54:32  customdesigned
-# Reject on bad_reputation or blacklist and nodspam.  Match valid helo like
-# PTR for guessed SPF pass.
-#
-# Revision 1.74  2006/12/19 00:59:30  customdesigned
-# Add archive option to wiretap.
-#
-# Revision 1.73  2006/12/04 18:47:03  customdesigned
-# Reject multiple recipients to DSN.
-# Auto-disable gossip on DB error.
-#
-# Revision 1.72  2006/11/22 16:31:22  customdesigned
-# SRS domains were missing srs_reject check when SES was active.
-#
-# Revision 1.71  2006/11/22 01:03:28  customdesigned
-# Replace last use of deprecated rfc822 module.
-#
-# Revision 1.70  2006/11/21 18:45:49  customdesigned
-# Update a use of deprecated rfc822.  Recognize report-type=delivery-status
-#
 # See ChangeLog
 #
 # Author: Stuart D. Gathman <stuart@bmsi.com>
-# Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
+# Copyright 2001,2002,2003,2004,2005-2010 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
 import sys
@@ -294,6 +199,7 @@ import re
 import shutil
 import gc
 import anydbm
+import smtplib
 import Milter.dsn as dsn
 from Milter.dynip import is_dynip as dynip
 from Milter.utils import \
@@ -400,6 +306,7 @@ dspam_userdir = None
 dspam_exempt = {}
 dspam_whitelist = {}
 whitelist_senders = {}
+whitelist_mx = ()
 dspam_screener = ()
 dspam_internal = True   # True if internal mail should be dspammed
 dspam_reject = ()
@@ -525,8 +432,9 @@ def read_config(list):
   # dspam section
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt, dspam_internal
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
-  global whitelist_senders
+  global whitelist_senders,whitelist_mx
   whitelist_senders = cp.getaddrset('dspam','whitelist_senders')
+  whitelist_mx = cp.getlist('dspam','whitelist_mx')
   dspam_dict = cp.getdefault('dspam','dspam_dict')
   dspam_exempt = cp.getaddrset('dspam','dspam_exempt')
   dspam_whitelist = cp.getaddrset('dspam','dspam_whitelist')
@@ -2043,6 +1951,7 @@ class bmsMilter(Milter.Base):
       self.alter_recipients(self.discard_list,self.redirect_list)
       # auto whitelist original recipients
       if not defanged and self.whitelist_sender:
+        whitelisted = []
         for canon_to in self.recipients:
           user,domain = canon_to.split('@')
           if internal_domains:
@@ -2050,10 +1959,19 @@ class bmsMilter(Milter.Base):
               if fnmatchcase(domain,pat): break
             else:
               auto_whitelist[canon_to] = None
+              whitelisted.append(canon_to)
               self.log('Auto-Whitelist:',canon_to)
           else:
             auto_whitelist[canon_to] = None
+            whitelisted.append(canon_to)
             self.log('Auto-Whitelist:',canon_to)
+        if whitelisted:
+          for mx in whitelist_mx:
+            try:
+              self.send_rcpt(mx,whitelisted)
+              self.log('Tell MX:',mx)
+            except x:
+              self.log('Tell MX:',mx,x)
 
     for name,val,idx in self.new_headers:
       try:
@@ -2138,8 +2056,33 @@ class bmsMilter(Milter.Base):
       out.close()
     return Milter.TEMPFAIL
 
+  ## Send recipients to primary MX for auto whitelisting
+  def send_rcpt(self,mx,rcpts,timeout=30):
+    if not srs: return  # requires SRS for authentication
+    sender = srs.forward(self.canon_from,self.receiver)
+    smtp = smtplib.SMTP()
+    toolate = time.time() + timeout
+    smtp.connect(mx)
+    code,resp = smtp.helo(self.receiver)
+    if not (200 <= code <= 299):
+      raise smtplib.SMTPHeloError(code, resp)
+    code,resp = smtp.docmd('MAIL FROM: <%s>'%sender)
+    if code != 250:
+      raise smtplib.SMTPSenderRefused(code, resp, '<%s>'%sender)
+    badrcpts = {}
+    for rcpt in rcpts:
+      code,resp = smtp.rcpt(rcpt)
+      if code not in (250,251):
+        badrcpts[rcpt] = (code,resp)# permanent error
+    smtp.quit()
+    if badrcpts: return badrcpts
+    return None
+
   def send_dsn(self,q,msg=None,template_name=None):
-    sender = q.s
+    if template_name and template_name.startswith('helo'):
+      sender = 'postmaster@'+q.h
+    else:
+      sender = q.s
     cached = cbv_cache.has_key(sender)
     if cached:
       self.log('CBV:',sender,'(cached)')
