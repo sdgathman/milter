@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.163  2010/10/16 21:23:00  customdesigned
+# Send auto-whitelist recipients to whitelist_mx
+#
 # Revision 1.162  2010/08/18 03:58:06  customdesigned
 # Fix typos
 #
@@ -895,6 +898,18 @@ class bmsMilter(Milter.Base):
         wl_users = whitelist_senders.get(domain,())
         if user in wl_users or '' in wl_users:
           self.whitelist_sender = True
+      elif srs and domain in srs_domain and user.lower().startswith('srs'):
+        try:
+          newaddr = srs.reverse(self.canon_from)
+          self.log("Original MFROM:",newaddr)
+          user,domain = newaddr.split('@')
+          wl_users = whitelist_senders.get(domain,())
+          if user in wl_users or '' in wl_users:
+            self.whitelist_sender = True
+        except:
+          self.log("REJECT: bad MFROM signature",self.canon_from)
+          self.setreply('550','5.7.1','Bad MFROM signature')
+          return Milter.REJECT
           
       self.rejectvirus = domain in reject_virus_from
       if user in wiretap_users.get(domain,()):
@@ -1848,6 +1863,23 @@ class bmsMilter(Milter.Base):
       return True
     return False
 
+  def whitelist_rcpts(self):
+    whitelisted = []
+    for canon_to in self.recipients:
+      user,domain = canon_to.split('@')
+      if internal_domains:
+        for pat in internal_domains:
+          if fnmatchcase(domain,pat): break
+        else:
+          auto_whitelist[canon_to] = None
+          whitelisted.append(canon_to)
+          self.log('Auto-Whitelist:',canon_to)
+      else:
+        auto_whitelist[canon_to] = None
+        whitelisted.append(canon_to)
+        self.log('Auto-Whitelist:',canon_to)
+    return whitelisted
+
   def eom(self):
     if self.ioerr:
       fname = tempfile.mktemp(".ioerr")  # save message that caused crash
@@ -1951,20 +1983,7 @@ class bmsMilter(Milter.Base):
       self.alter_recipients(self.discard_list,self.redirect_list)
       # auto whitelist original recipients
       if not defanged and self.whitelist_sender:
-        whitelisted = []
-        for canon_to in self.recipients:
-          user,domain = canon_to.split('@')
-          if internal_domains:
-            for pat in internal_domains:
-              if fnmatchcase(domain,pat): break
-            else:
-              auto_whitelist[canon_to] = None
-              whitelisted.append(canon_to)
-              self.log('Auto-Whitelist:',canon_to)
-          else:
-            auto_whitelist[canon_to] = None
-            whitelisted.append(canon_to)
-            self.log('Auto-Whitelist:',canon_to)
+        whitelisted = self.whitelist_rcpts()
         if whitelisted:
           for mx in whitelist_mx:
             try:
@@ -2139,7 +2158,10 @@ class bmsMilter(Milter.Base):
     return Milter.CONTINUE
 
   def abort(self):
-    self.log("abort after %d body chars" % self.bodysize)
+    if self.whitelist_sender and self.recipients:
+      self.whitelist_rcpts()
+    else:
+      self.log("abort after %d body chars" % self.bodysize)
     return Milter.CONTINUE
 
 def main():
