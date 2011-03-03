@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.164  2010/10/27 03:07:33  customdesigned
+# Whitelist recipients from signed MFROM if aborted before DATA.
+#
 # Revision 1.163  2010/10/16 21:23:00  customdesigned
 # Send auto-whitelist recipients to whitelist_mx
 #
@@ -750,9 +753,9 @@ class bmsMilter(Milter.Base):
       else:
         ct = t[0]
       if case_sensitive_localpart:
-        cf = self.canon_from
+        cf = self.efrom
       else:
-        cf = self.canon_from.lower()
+        cf = self.efrom.lower()
       cf0 = cf.split('@',1)
       if len(cf0) == 2:
         cf0 = '@' + cf0[1]
@@ -811,6 +814,7 @@ class bmsMilter(Milter.Base):
     self.cbv_needed = None
     self.whitelist_sender = False
     self.postmaster_reply = False
+    self.orig_from = None
     if f == '<>' and internal_mta and self.internal_connection:
       if not iniplist(self.connectip,internal_mta):
         self.log("REJECT: pretend MTA at ",self.connectip,
@@ -869,6 +873,15 @@ class bmsMilter(Milter.Base):
         if fnmatchcase(domain,pat):
           self.internal_domain = True
           break
+      if srs and domain in srs_domain and user.lower().startswith('srs0'):
+        try:
+          newaddr = srs.reverse(self.canon_from)
+          self.orig_from = newaddr
+          self.log("Original MFROM:",newaddr)
+        except:
+          self.log("REJECT: bad MFROM signature",self.canon_from)
+          self.setreply('550','5.7.1','Bad MFROM signature')
+          return Milter.REJECT
       if self.internal_connection:
         if self.user:
           p = SPFPolicy('%s@%s'%(self.user,domain))
@@ -895,21 +908,13 @@ class bmsMilter(Milter.Base):
           'It is either badly misconfigured or controlled by organized crime.'
           )
           return Milter.REJECT
+      # effective from
+      if self.orig_from:
+        user,domain = self.orig_from.split('@')
+      if self.internal_connection:
         wl_users = whitelist_senders.get(domain,())
         if user in wl_users or '' in wl_users:
           self.whitelist_sender = True
-      elif srs and domain in srs_domain and user.lower().startswith('srs'):
-        try:
-          newaddr = srs.reverse(self.canon_from)
-          self.log("Original MFROM:",newaddr)
-          user,domain = newaddr.split('@')
-          wl_users = whitelist_senders.get(domain,())
-          if user in wl_users or '' in wl_users:
-            self.whitelist_sender = True
-        except:
-          self.log("REJECT: bad MFROM signature",self.canon_from)
-          self.setreply('550','5.7.1','Bad MFROM signature')
-          return Milter.REJECT
           
       self.rejectvirus = domain in reject_virus_from
       if user in wiretap_users.get(domain,()):
@@ -955,34 +960,35 @@ class bmsMilter(Milter.Base):
     res = self.spf and self.spf_guess
     hres = self.spf and self.spf_helo
     # Check whitelist and blacklist
-    if auto_whitelist.has_key(self.canon_from):
+    self.efrom = self.orig_from or self.canon_from
+    if auto_whitelist.has_key(self.efrom):
       self.greylist = False
       if res == 'pass' or self.trusted_relay:
         self.whitelist = True
-        self.log("WHITELIST",self.canon_from)
+        self.log("WHITELIST",self.efrom)
       else:
         self.dspam = False
-        self.log("PROBATION",self.canon_from)
+        self.log("PROBATION",self.efrom)
       if res not in ('permerror','softfail'):
         self.cbv_needed = None
-    elif cbv_cache.has_key(self.canon_from) and cbv_cache[self.canon_from] \
-        or self.canon_from in blacklist:
+    elif cbv_cache.has_key(self.efrom) and cbv_cache[self.efrom] \
+        or self.efrom in blacklist:
       # FIXME: don't use cbv_cache for blacklist if policy is 'OK'
       if not self.internal_connection:
         self.offense(inc=2)
         if not dspam_userdir:
           if domain in blacklist:
-            self.log('REJECT: BLACKLIST',self.canon_from)
+            self.log('REJECT: BLACKLIST',self.efrom)
             self.setreply('550','5.7.1', 'Sender email local blacklist')
           else:
-            res = cbv_cache[self.canon_from]
+            res = cbv_cache[self.efrom]
             desc = "CBV: %d %s" % res[:2]
             self.log('REJECT:',desc)
             self.setreply('550','5.7.1',*desc.splitlines())
           return Milter.REJECT
         self.greylist = False   # don't delay - use spam for training
         self.blacklist = True
-        self.log("BLACKLIST",self.canon_from)
+        self.log("BLACKLIST",self.efrom)
     else:
       # REJECT delayed until after checking whitelist
       if self.policy in ('REJECT', 'BAN'):
@@ -1677,7 +1683,7 @@ class bmsMilter(Milter.Base):
                   self.bandomain(wild=s.isdigit() and int(s))
               user = 'spam'
             if user == 'spam' and self.internal_connection:
-              sender = dspam_users.get(self.canon_from)
+              sender = dspam_users.get(self.efrom)
               if sender:
                 self.log("SPAM: %s" % sender)   # log user for SPAM
                 self.fp.seek(0)
@@ -1687,7 +1693,7 @@ class bmsMilter(Milter.Base):
                 txt = None
                 return Milter.DISCARD
             elif user == 'falsepositive' and self.internal_connection:
-              sender = dspam_users.get(self.canon_from)
+              sender = dspam_users.get(self.efrom)
               if sender:
                 self.log("FP: %s" % sender)     # log user for FP
                 txt = ds.false_positive(sender,txt)
@@ -1703,7 +1709,7 @@ class bmsMilter(Milter.Base):
                 if self.blacklist:
                   self.log('REJECT: BLACKLISTED')
                   self.setreply('550','5.7.1',
-                        '%s has been blacklisted.'%self.canon_from)
+                        '%s has been blacklisted.'%self.efrom)
                   self.fp = None
                   return Milter.REJECT
                 return False
@@ -1989,7 +1995,7 @@ class bmsMilter(Milter.Base):
             try:
               self.send_rcpt(mx,whitelisted)
               self.log('Tell MX:',mx)
-            except x:
+            except Exception,x:
               self.log('Tell MX:',mx,x)
 
     for name,val,idx in self.new_headers:
@@ -2158,7 +2164,7 @@ class bmsMilter(Milter.Base):
     return Milter.CONTINUE
 
   def abort(self):
-    if self.whitelist_sender and self.recipients:
+    if self.whitelist_sender and self.recipients and self.trusted_relay:
       self.whitelist_rcpts()
     else:
       self.log("abort after %d body chars" % self.bodysize)
