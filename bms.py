@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.165  2011/03/03 21:45:24  customdesigned
+# Extract original MFROM from SRS
+#
 # Revision 1.164  2010/10/27 03:07:33  customdesigned
 # Whitelist recipients from signed MFROM if aborted before DATA.
 #
@@ -320,7 +323,7 @@ dspam_sizelimit = 180000
 srs = None
 ses = None
 srs_reject_spoofed = False
-srs_domain = None
+srs_domain = ()
 spf_reject_neutral = ()
 spf_accept_softfail = ()
 spf_accept_fail = ()

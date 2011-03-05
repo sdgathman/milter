@@ -2,15 +2,16 @@
 # module.  To compile all three on 32-bit Intel, use:
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
-%define __python python2.4
+%define __python python2.6
+%define pythonbase python26
 %define sysvinit milter.rc
 %define libdir %{_libdir}/pymilter
 
 Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Version: 0.8.14
-Release: 2%{dist}.py24
+Version: 0.8.15
+Release: 1%{dist}.py26
 Source: milter-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
 License: GPLv2+
@@ -19,7 +20,7 @@ BuildRoot: %{_tmppath}/%{name}-buildroot
 BuildArch: noarch
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{__python} >= 2.4, pyspf > 2.0.5, pymilter >= 0.9.3
+Requires: %{pythonbase}, %{pythonbase}-pyspf >= 2.0.6, %{pythonbase} >= 0.9.3
 %ifos Linux
 Requires: chkconfig
 %endif
@@ -32,7 +33,7 @@ bayesian filtering.
 %package spf
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Requires: pyspf >= 2.0.4, pymilter >= 0.9.3
+Requires: %{pythonbase}-pyspf >= 2.0.4, %{pythonbase}-pymilter >= 0.9.4
 Obsoletes: pymilter-spf < 0.8.10
 
 %description spf
@@ -174,6 +175,9 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Thu Mar 03 2011 Stuart Gathman <stuart@bmsi.com> 0.8.15-1
+- Python2.6
+
 * Sat Apr 10 2010 Stuart Gathman <stuart@bmsi.com> 0.8.14-2
 - Default ip banning off
 
