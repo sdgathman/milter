@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.166  2011/03/05 05:12:55  customdesigned
+# Release 0.8.15
+#
 # Revision 1.165  2011/03/03 21:45:24  customdesigned
 # Extract original MFROM from SRS
 #
@@ -279,6 +282,7 @@ import logging
 # Global configuration defaults suitable for test framework.
 socketname = "/tmp/pythonsock"
 reject_virus_from = ()
+delayed_reject = True
 wiretap_users = {}
 discard_users = {}
 wiretap_dest = None
@@ -682,9 +686,18 @@ class bmsMilter(Milter.Base):
     self.new_headers.append((name,val,idx))
     self.log('%s: %s' % (name,val))
 
+  def delay_reject(self,*args):
+    if delayed_reject:
+      self.reject = args
+      return Milter.CONTINUE
+    self.setreply(*args)
+    return Milter.REJECT
+
   def connect(self,hostname,unused,hostaddr):
     self.internal_connection = False
     self.trusted_relay = False
+    self.reject = None
+    self.offenses = 0
     # sometimes people put extra space in sendmail config, so we strip
     self.receiver = self.getsymval('j').strip()
     if hostaddr and len(hostaddr) > 0:
@@ -705,18 +718,16 @@ class bmsMilter(Milter.Base):
     if self.missing_ptr:
       connecttype += ' DYN'
     self.log("connect from %s at %s %s" % (hostname,hostaddr,connecttype))
-    if addr2bin(ipaddr) in banned_ips:
-      self.log("REJECT: BANNED IP")
-      self.setreply('550','5.7.1', 'Banned for dictionary attacks')
-      return Milter.REJECT
     self.hello_name = None
     self.connecthost = hostname
+    if addr2bin(ipaddr) in banned_ips:
+      self.log("REJECT: BANNED IP")
+      return self.delay_reject('550','5.7.1', 'Banned for dictionary attacks')
     if hostname == 'localhost' and not ipaddr.startswith('127.') \
     or hostname == '.':
       self.log("REJECT: PTR is",hostname)
-      self.setreply('550','5.7.1', '"%s" is not a reasonable PTR name'%hostname)
-      return Milter.REJECT
-    self.offenses = 0
+      return self.delay_reject('550','5.7.1',
+        '"%s" is not a reasonable PTR name'%hostname)
     return Milter.CONTINUE
 
   def hello(self,hostname):
@@ -828,6 +839,8 @@ class bmsMilter(Milter.Base):
         'send return receipts, use a more standards compliant email client.'
         )
         return Milter.REJECT
+    if self.canon_from:
+      self.reject = None	# reset delayed reject seen after mail from
     t = parse_addr(f)
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
@@ -869,9 +882,8 @@ class bmsMilter(Milter.Base):
       user,domain = t
       if isbanned(domain,banned_domains):
         self.log("REJECT: banned domain",domain)
-	self.setreply('550','5.7.1',
+	return self.delay_reject('550','5.7.1',
 	  '%s has been identified as a spammer domain.')
-	return Milter.REJECT
       for pat in internal_domains:
         if fnmatchcase(domain,pat):
           self.internal_domain = True
@@ -982,28 +994,28 @@ class bmsMilter(Milter.Base):
         if not dspam_userdir:
           if domain in blacklist:
             self.log('REJECT: BLACKLIST',self.efrom)
-            self.setreply('550','5.7.1', 'Sender email local blacklist')
+            return self.delay_reject('550','5.7.1',
+              'Sender email local blacklist')
           else:
             res = cbv_cache[self.efrom]
             desc = "CBV: %d %s" % res[:2]
             self.log('REJECT:',desc)
-            self.setreply('550','5.7.1',*desc.splitlines())
-          return Milter.REJECT
+            return self.delay_reject('550','5.7.1',*desc.splitlines())
         self.greylist = False   # don't delay - use spam for training
         self.blacklist = True
         self.log("BLACKLIST",self.efrom)
-    else:
+    elif not self.reject:
       # REJECT delayed until after checking whitelist
       if self.policy in ('REJECT', 'BAN'):
           self.log('REJECT: no PTR, HELO or SPF')
-          self.setreply('550','5.7.1',
+          self.offense() # ban ip if too many bad MFROMs
+          return self.delay_reject('550','5.7.1',
     "You must have a valid HELO or publish SPF: http://www.openspf.org ",
     "Contact your mail administrator IMMEDIATELY!  Your mail server is ",
     "severely misconfigured.  It has no PTR record (dynamic PTR records ",
     "that contain your IP don't count), an invalid or dynamic HELO, ",
     "and no SPF record."
           )
-          return self.offense() # ban ip if too many bad MFROMs
       if domain and rc == Milter.CONTINUE \
 	  and not (self.internal_connection or self.trusted_relay):
 	rc = self.create_gossip(domain,res,hres)
@@ -1040,9 +1052,8 @@ class bmsMilter(Milter.Base):
 	  # bad reputation could be rejected here.
 	  if self.reputation < -70 and self.confidence > 5:
 	    self.log('REJECT: REPUTATION')
-	    self.setreply('550','5.7.1',
+	    return self.delay_reject('550','5.7.1',
 	      'Your domain has been sending nothing but spam')
-	    return Milter.REJECT
 	  if self.reputation > 40 and self.confidence > 0:
 	    self.greylist = False
       except:
@@ -1104,13 +1115,12 @@ class bmsMilter(Milter.Base):
             policy = 'OK'
         if self.need_cbv(policy,q,'heloerror'):
           self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
-          self.setreply('550','5.7.1',htxt,
+          return self.delay_reject('550','5.7.1',htxt,
             "The hostname given in your MTA's HELO response is not listed",
             "as a legitimate MTA in the SPF records for your domain.  If you",
             "get this bounce, the message was not in fact a forgery, and you",
             "should IMMEDIATELY notify your email administrator of the problem."
           )
-          return Milter.REJECT
         if hres == 'none' and spf_best_guess \
           and not dynip(self.hello_name,self.connectip):
           # HELO must match more exactly.  Don't match PTR or zombies
@@ -1122,8 +1132,7 @@ class bmsMilter(Milter.Base):
       if self.internal_domain and res == 'none':
         # we don't accept our own domains externally without an SPF record
         self.log('REJECT: spam from self',q.o)
-        self.setreply('550','5.7.1',"I hate talking to myself!")
-        return Milter.REJECT
+        return self.delay_reject('550','5.7.1',"I hate talking to myself!")
       if spf_best_guess and res == 'none':
         #self.log('SPF: no record published, guessing')
         q.set_default_explanation(
@@ -1148,28 +1157,26 @@ class bmsMilter(Milter.Base):
     if res in ('deny', 'fail'):
       if self.need_cbv(p.getFailPolicy(),q,'fail'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-        self.setreply(str(code),'5.7.1',txt)
         # A proper SPF fail error message would read:
         # forger.biz [1.2.3.4] is not allowed to send mail with the domain
         # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
         if q.d in hello_blacklist:
           self.offense(inc=4)
-        return Milter.REJECT
+        return self.delay_reject(str(code),'5.7.1',txt)
     elif res == 'softfail':
       if self.need_cbv(p.getSoftfailPolicy(),q,'softfail'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-        self.setreply('550','5.7.1',
+        return self.delay_reject('550','5.7.1',
           'SPF softfail: If you get this Delivery Status Notice, your email',
           'was probably legitimate.  Your administrator has published SPF',
           'records in a testing mode.  The SPF record reported your email as',
           'a forgery, which is a mistake if you are reading this.  Please',
           'notify your administrator of the problem immediately.'
         )
-        return Milter.REJECT
     elif res == 'neutral':
       if self.need_cbv(p.getNeutralPolicy(),q,'neutral'):
         self.log('REJECT: SPF neutral for',q.s)
-        self.setreply('550','5.7.1',
+        return self.delay_reject('550','5.7.1',
           'mail from %s must pass SPF: http://openspf.org/why.html' % q.o,
           'The %s domain is one that spammers love to forge.  Due to' % q.o,
           'the volume of forged mail, we can only accept mail that',
@@ -1177,7 +1184,6 @@ class bmsMilter(Milter.Base):
           'Sending your email through the recommended outgoing SMTP',
           'servers for %s should accomplish this.' % q.o
         )
-        return Milter.REJECT
     elif res == 'pass':
       if self.need_cbv(p.getPassPolicy(),q,'pass'):
         self.log('REJECT: SPF pass for',q.s)
@@ -1191,11 +1197,10 @@ class bmsMilter(Milter.Base):
       if self.need_cbv(p.getPermErrorPolicy(),q,'permerror'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
         # latest SPF draft recommends 5.5.2 instead of 5.7.1
-        self.setreply(str(code),'5.5.2',txt.replace('\0','^@'),
+        return self.delay_reject(str(code),'5.5.2',txt.replace('\0','^@'),
           'There is a fatal syntax error in the SPF record for %s' % q.o,
           'We cannot accept mail from %s until this is corrected.' % q.o
         )
-        return Milter.REJECT
     kv = {}
     if hres and q.h != q.o:
       kv['helo_spf'] = hres
@@ -1318,7 +1323,7 @@ class bmsMilter(Milter.Base):
     except:
       self.log("rcpt to",to,str)
       raise
-    if self.greylist and greylist and self.canon_from:
+    if self.greylist and greylist and self.canon_from and not self.reject:
       # no policy for trusted or internal
       rc = greylist.check(self.connectip,self.canon_from,canon_to)
       if rc == 0:
@@ -1470,14 +1475,17 @@ class bmsMilter(Milter.Base):
     return Milter.REJECT
 
   def data(self):
+    if self.reject:
+      self.log("DELAYED REJECT")
+      self.setreply(*self.reject)
+      return Milter.REJECT
     if not self.data_allowed:
       return self.forged_bounce()
     return Milter.CONTINUE
     
   def header(self,name,hval):
-    if not self.data_allowed:
-      return self.forged_bounce()
-          
+    if self.data() == Milter.REJECT:
+      return Milter.REJECT
     lname = name.lower()
     # decode near ascii text to unobfuscate
     val = parse_header(hval)
@@ -1515,8 +1523,8 @@ class bmsMilter(Milter.Base):
 
   def eoh(self):
     if not self.fp: return Milter.TEMPFAIL      # not seen by envfrom
-    if not self.data_allowed:
-      return self.forged_bounce()
+    if self.data() == Milter.REJECT:
+      return Milter.REJECT
     for name,val,idx in self.new_headers:
       self.fp.write("%s: %s\n" % (name,val))    # add new headers to buffer
     self.fp.write("\n")                         # terminate headers
