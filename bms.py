@@ -875,15 +875,16 @@ class bmsMilter(Milter.Base):
           self.getsymval('{cert_subject}'),
           "verify =",self.getsymval('{verify}')
         )
+      if self.reject:
+	self.log("REJECT CANCELED")
+	self.reject = None
 
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
     self.internal_domain = False
+    self.umis = None
+    self.efrom = self.canon_from
     if len(t) == 2:
       user,domain = t
-      if isbanned(domain,banned_domains):
-        self.log("REJECT: banned domain",domain)
-	return self.delay_reject('550','5.7.1',
-	  '%s has been identified as a spammer domain.')
       for pat in internal_domains:
         if fnmatchcase(domain,pat):
           self.internal_domain = True
@@ -926,6 +927,11 @@ class bmsMilter(Milter.Base):
       # effective from
       if self.orig_from:
         user,domain = self.orig_from.split('@')
+        self.efrom = self.orig_from
+      if isbanned(domain,banned_domains):
+        self.log("REJECT: banned domain",domain)
+	return self.delay_reject('550','5.7.1',
+	  '%s has been identified as a spammer domain.')
       if self.internal_connection:
         wl_users = whitelist_senders.get(domain,())
         if user in wl_users or '' in wl_users:
@@ -947,7 +953,6 @@ class bmsMilter(Milter.Base):
       self.log("REJECT: missing HELO")
       self.setreply('550','5.7.1',"It's polite to say HELO first.")
       return Milter.REJECT
-    self.umis = None
     self.spf = None
     self.policy = None
     if not (self.internal_connection or self.trusted_relay)     \
@@ -975,7 +980,6 @@ class bmsMilter(Milter.Base):
     res = self.spf and self.spf_guess
     hres = self.spf and self.spf_helo
     # Check whitelist and blacklist
-    self.efrom = self.orig_from or self.canon_from
     if auto_whitelist.has_key(self.efrom):
       self.greylist = False
       if res == 'pass' or self.trusted_relay:
