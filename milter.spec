@@ -6,6 +6,8 @@
 %define pythonbase python26
 %define sysvinit milter.rc
 %define libdir %{_libdir}/pymilter
+%define logdir /var/log/milter
+%define datadir /var/lib/milter
 
 Name: milter
 Group: Applications/System
@@ -20,7 +22,8 @@ BuildRoot: %{_tmppath}/%{name}-buildroot
 BuildArch: noarch
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{pythonbase}, %{pythonbase}-pyspf >= 2.0.6, %{pythonbase} >= 0.9.3
+Requires: %{pythonbase}, %{pythonbase}-pyspf >= 2.0.6
+Requires: %{pythonbase}-pymilter >= 0.9.3, %{pythonbase}-pydns >= 2.3.5
 %ifos Linux
 Requires: chkconfig
 %endif
@@ -48,9 +51,10 @@ tailored by domain.
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc/mail
-mkdir -p $RPM_BUILD_ROOT/var/log/milter/save
+mkdir -p $RPM_BUILD_ROOT%{logdir}/save
+mkdir -p $RPM_BUILD_ROOT%{datadir}
 mkdir -p $RPM_BUILD_ROOT%{libdir}
-cp *.txt $RPM_BUILD_ROOT/var/log/milter
+cp *.txt $RPM_BUILD_ROOT%{datadir}
 cp -p bms.py spfmilter.py ban2zone.py $RPM_BUILD_ROOT%{libdir}
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 cp spfmilter.cfg $RPM_BUILD_ROOT/etc/mail
@@ -58,16 +62,16 @@ cp spfmilter.cfg $RPM_BUILD_ROOT/etc/mail
 # logfile rotation
 mkdir -p $RPM_BUILD_ROOT/etc/logrotate.d
 cat >$RPM_BUILD_ROOT/etc/logrotate.d/milter <<'EOF'
-/var/log/milter/milter.log {
+%{logdir}/milter.log {
   copytruncate
   compress
 }
-/var/log/milter/banned_ips {
+%{datadir}/banned_ips {
   rotate 7
   daily
   copytruncate
 }
-/var/log/milter/banned_domains {
+%{datadir}/banned_domains {
   rotate 7
   weekly
   copytruncate
@@ -76,21 +80,16 @@ EOF
 
 # purge saved defanged message copies
 mkdir -p $RPM_BUILD_ROOT/etc/cron.daily
-%ifos aix4.1
-R=
-%else
 R='-r'
-%endif
 cat >$RPM_BUILD_ROOT/etc/cron.daily/milter <<'EOF'
 #!/bin/sh
 
-find /var/log/milter/save -mtime +7 | xargs $R rm
+find %{logdir}/save -mtime +7 | xargs $R rm
 # work around any memory leaks
 /etc/init.d/milter condrestart
 EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 
-%ifnos aix4.1
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 cp %{sysvinit} $RPM_BUILD_ROOT/etc/rc.d/init.d/milter
 cp spfmilter.rc $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter
@@ -110,20 +109,10 @@ python="%{__python}"
 w
 q
 EOF
-%endif	# aix4.1
 
 mkdir -p $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
 cp -p rhsbl.m4 $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
 
-%ifos aix4.1
-%post
-mkssys -s milter -p %{libdir}/start.sh -u 25 -S -n 15 -f 9 -G mail || :
-
-%preun
-if [ $1 = 0 ]; then
-  rmssys -s milter || :
-fi
-%else # not aix4.1
 %post 
 #echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
 /sbin/chkconfig --add milter
@@ -140,28 +129,24 @@ fi
 if [ $1 = 0 ]; then
   /sbin/chkconfig --del spfmilter
 fi
-%endif # aix4.1
 
 %files 
 %defattr(-,root,root)
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
-%ifos aix4.1
-%defattr(-,smmsp,mail)
-%else
 /etc/rc.d/init.d/milter
 %defattr(-,mail,mail)
-%endif
-%dir /var/log/milter/save
+%dir %{logdir}/save
+%dir %{datadir}
 %{libdir}/bms.py
 %{libdir}/ban2zone.py
-%config(noreplace) /var/log/milter/strike3.txt
-%config(noreplace) /var/log/milter/softfail.txt
-%config(noreplace) /var/log/milter/fail.txt
-%config(noreplace) /var/log/milter/neutral.txt
-%config(noreplace) /var/log/milter/quarantine.txt
-%config(noreplace) /var/log/milter/permerror.txt
-%config(noreplace) /var/log/milter/temperror.txt
+%config(noreplace) %{datadir}/strike3.txt
+%config(noreplace) %{datadir}/softfail.txt
+%config(noreplace) %{datadir}/fail.txt
+%config(noreplace) %{datadir}/neutral.txt
+%config(noreplace) %{datadir}/quarantine.txt
+%config(noreplace) %{datadir}/permerror.txt
+%config(noreplace) %{datadir}/temperror.txt
 %config(noreplace) /etc/mail/pymilter.cfg
 /usr/share/sendmail-cf/hack/rhsbl.m4
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.168  2011/04/01 02:34:38  customdesigned
+# Fix efrom and umis with delayed reject.
+#
 # Revision 1.166  2011/03/05 05:12:55  customdesigned
 # Release 0.8.15
 #
@@ -353,7 +356,7 @@ milter_log = logging.getLogger('milter')
 def read_config(list):
   cp = MilterConfigParser({
     'tempdir': "/var/log/milter/save",
-    'datadir': "/var/log/milter",
+    'datadir': "/var/lib/milter",
     'socket': "/var/run/milter/pythonsock",
     'scan_html': 'no',
     'scan_rfc822': 'yes',
