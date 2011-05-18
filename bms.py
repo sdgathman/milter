@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.169  2011/04/13 19:50:04  customdesigned
+# Move persistent data to /var/lib/milter
+#
 # Revision 1.168  2011/04/01 02:34:38  customdesigned
 # Fix efrom and umis with delayed reject.
 #
@@ -547,6 +550,16 @@ def findsrs(fp):
       if lnl.startswith(k):
         lastln = ln
         break
+
+def inCharSets(v,*encs):
+  try: u = unicode(v,'utf8')
+  except: return True
+  for enc in encs:
+    try:  
+      s = u.encode(enc,'backslashreplace')
+      return s.count(r'\u') < 3
+    except: UnicodeError
+  return False
 
 def param2dict(str):
   pairs = [x.split('=',1) for x in str]
@@ -1363,9 +1376,9 @@ class bmsMilter(Milter.Base):
 
       # even if we wanted the Taiwanese spam, we can't read Chinese
       if block_chinese:
-        if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
+        if not inCharSets(val,'iso-8859-1'):
           self.log('REJECT: %s: %s' % (name,val))
-          self.setreply('550','5.7.1',"We don't understand chinese")
+          self.setreply('550','5.7.1',"We don't understand that charset")
           return Milter.REJECT
 
       # check for spam that claims to be legal
