@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.170  2011/05/18 02:50:54  customdesigned
+# Improve chinese detection
+#
 # Revision 1.169  2011/04/13 19:50:04  customdesigned
 # Move persistent data to /var/lib/milter
 #
@@ -249,6 +252,10 @@ except: SES = None
 # Import spf if available
 try: import spf
 except: spf = None
+
+# Import dkim if available
+try: import dkim
+except: dkim = None
 
 # Sometimes, MTAs reply to our DSN.  We recognize this type of reply/DSN
 # and check for the original recipient SRS encoded in Message-ID.
@@ -674,11 +681,28 @@ class bmsMilter(Milter.Base):
   def log(self,*msg):
     milter_log.info('[%d] %s',self.id,' '.join([str(m) for m in msg]))
 
+  def logstream(outerself):
+    "Return a file like object that call self.log for each line"
+    class LineWriter(object):
+      def __init__(self):
+	self._buf = ''
+
+      def write(self,s):
+	s = self._buf + s
+	pos = s.find('\n')
+	while pos >= 0:
+	  outerself.log(s[:pos])
+	  s = s[pos+1:]
+	  pos = s.find('\n')
+	self._buf = s
+    return LineWriter()
+
   def __init__(self):
     self.tempname = None
     self.mailfrom = None        # sender in SMTP form
     self.canon_from = None      # sender in end user form
     self.fp = None
+    self.pristine_headers = None
     self.bodysize = 0
     self.id = Milter.uniqueID()
 
@@ -820,6 +844,7 @@ class bmsMilter(Milter.Base):
     #self.envid = param.get('ENVID',None)
     #self.mail_param = param
     self.fp = StringIO.StringIO()
+    self.pristine_headers = StringIO.StringIO()
     self.tempname = None
     self.mailfrom = f
     self.forward = True
@@ -845,6 +870,7 @@ class bmsMilter(Milter.Base):
     self.whitelist_sender = False
     self.postmaster_reply = False
     self.orig_from = None
+    self.has_dkim = False
     if f == '<>' and internal_mta and self.internal_connection:
       if not iniplist(self.connectip,internal_mta):
         self.log("REJECT: pretend MTA at ",self.connectip,
@@ -1533,12 +1559,18 @@ class bmsMilter(Milter.Base):
       self.trust_spf = False
       self.external_spf = val
       self.log('%s: %s' % (name,val.splitlines()[0]))
+    elif dkim and lname == 'dkim-signature':
+      self.has_dkim = True
+      self.log('%s: %s' % (name,val.splitlines()[0]))
+    # FIXME: keep both decoded and pristine headers.  DKIM needs
+    # pristine headers.
     if self.fp:
       try:
-        val = val.encode('us-ascii')
+        val = val.encode('iso-8859-1')
       except:
         val = hval
-      self.fp.write("%s: %s\n" % (name,val))    # add header to buffer
+      self.fp.write("%s: %s\n" % (name,val))    # add decoded header to buffer
+      self.pristine_headers.write("%s: %s\n" % (name,hval))
     return Milter.CONTINUE
 
   def eoh(self):
@@ -1587,6 +1619,7 @@ class bmsMilter(Milter.Base):
     self.tempname = fname
     self.fp = os.fdopen(fd,"w+b")
     self.fp.write(headers)      # IOError (e.g. disk full) causes TEMPFAIL
+    self.body_start = self.fp.tell()
     # check if headers are really spammy
     if dspam_dict and not self.internal_connection:
       ds = dspam.dspam(dspam_dict,dspam.DSM_PROCESS,
@@ -1672,6 +1705,25 @@ class bmsMilter(Milter.Base):
       domain = self.spf.o
       if domain:
 	self.create_gossip(domain,self.spf_guess,self.spf_helo)
+
+  def check_dkim(self):
+    if self.has_dkim:
+      logfp = StringIO.StringIO()
+      self.fp.seek(self.body_start)
+      txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
+      try:
+	res = dkim.verify(txt,debuglog=logfp)
+      except Exception,x:
+        res = False
+	self.log("check_dkim:",x)
+	milter_log.error("check_dkim: %s",x,exc_info=True)
+      if res:
+	self.log('DKIM: Pass')
+      else:
+        for s in logfp.getvalue().splitlines():
+	   self.log('DKIM:',s)
+	self.log('DKIM: Fail')
+      return res
 
   # check spaminess for recipients in dictionary groups
   # if there are multiple users getting dspammed, then
@@ -1949,7 +2001,8 @@ class bmsMilter(Milter.Base):
           self.tempname = None
           self.log('BLACKLIST:',sender,fname)
           return Milter.DISCARD
-
+      
+      self.check_dkim()
 
       # analyze external mail for spam
       spam_checked = self.check_spam()  # tag or quarantine for spam
