@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.171  2011/06/07 19:45:01  customdesigned
+# Check DKIM (log only)
+#
 # Revision 1.170  2011/05/18 02:50:54  customdesigned
 # Improve chinese detection
 #
@@ -845,6 +848,8 @@ class bmsMilter(Milter.Base):
     #self.mail_param = param
     self.fp = StringIO.StringIO()
     self.pristine_headers = StringIO.StringIO()
+    if self.tempname:
+      os.remove(self.tempname)  # remove any leftover from previous message
     self.tempname = None
     self.mailfrom = f
     self.forward = True
@@ -1720,9 +1725,12 @@ class bmsMilter(Milter.Base):
       if res:
 	self.log('DKIM: Pass')
       else:
+	fd,fname = tempfile.mkstemp(".dkim")
+	with os.fdopen(fd,"w+b") as fp:
+	  fp.write(txt)
         for s in logfp.getvalue().splitlines():
 	   self.log('DKIM:',s)
-	self.log('DKIM: Fail')
+	self.log('DKIM: Fail (saved as %s)'%fname)
       return res
 
   # check spaminess for recipients in dictionary groups
@@ -2050,8 +2058,8 @@ class bmsMilter(Milter.Base):
       milter_log.error("FAIL: %s",fname)        # log filename
       # let default exception handler print traceback and return 451 code
       raise
-    if rc == Milter.REJECT: return rc;
-    if rc == Milter.DISCARD: return rc;
+    if rc == Milter.REJECT: return rc
+    if rc == Milter.DISCARD: return rc
 
     if rc == Milter.CONTINUE: rc = Milter.ACCEPT # for testbms.py compat
 
