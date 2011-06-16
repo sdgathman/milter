@@ -22,8 +22,9 @@ BuildRoot: %{_tmppath}/%{name}-buildroot
 BuildArch: noarch
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{pythonbase}, %{pythonbase}-pyspf >= 2.0.6
+Requires: %{pythonbase} >= 2.6.5, %{pythonbase}-pyspf >= 2.0.6
 Requires: %{pythonbase}-pymilter >= 0.9.3, %{pythonbase}-pydns >= 2.3.5
+Conflicts: %{pythonbase}-pydkim < 0.4
 %ifos Linux
 Requires: chkconfig
 %endif

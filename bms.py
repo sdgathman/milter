@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.172  2011/06/07 22:24:38  customdesigned
+# Remove leftover tempname in envfrom.  Save failed DKIM
+#
 # Revision 1.171  2011/06/07 19:45:01  customdesigned
 # Check DKIM (log only)
 #
@@ -1713,23 +1716,23 @@ class bmsMilter(Milter.Base):
 
   def check_dkim(self):
     if self.has_dkim:
-      logfp = StringIO.StringIO()
       self.fp.seek(self.body_start)
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
       try:
-	res = dkim.verify(txt,debuglog=logfp)
-      except Exception,x:
+        d = dkim.DKIM(txt,logger=milter_log)
+	res = d.verify()
+      except dkim.DKIMException as x:
+	self.log('DKIM: %s'%x)
         res = False
-	self.log("check_dkim:",x)
+      except Exception as x:
+        res = False
 	milter_log.error("check_dkim: %s",x,exc_info=True)
       if res:
-	self.log('DKIM: Pass')
+	self.log('DKIM: Pass (%s)'%d.domain)
       else:
 	fd,fname = tempfile.mkstemp(".dkim")
 	with os.fdopen(fd,"w+b") as fp:
 	  fp.write(txt)
-        for s in logfp.getvalue().splitlines():
-	   self.log('DKIM:',s)
 	self.log('DKIM: Fail (saved as %s)'%fname)
       return res
 
