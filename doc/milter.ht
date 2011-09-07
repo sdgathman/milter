@@ -1,5 +1,9 @@
 Title: Python Milters
 
+<!-- This is part of the Python Milter Applications documentation.
+ Copyright (C) 2001,2002,2003,2004,2005-2011 Business Management Systems, Inc.
+ See the file license.ht for copying conditions.  -->
+
 <P ALIGN="CENTER"><A HREF="http://www.anybrowser.org/campaign/">
 <IMG SRC="http://bmsi.com/art/brain1.gif"
 ALT="Viewable With Any Browser" BORDER="0"></A>
@@ -8,7 +12,7 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
 	usemap="#banner_4" alt="Your vote?">
 <map name="banner_4">
   <area shape="rect" coords="330,25,426,59"
-  	href="http://education-survey.org/" alt="I Disagree">
+  	href="http://www.schoolandstate.org/Knowledge/Drennan/SchoolWars.htm" alt="I Disagree">
   <area shape="rect" coords="234,28,304,57" href="http://www.honestEd.com/" alt="I Agree">
 </map>
 </P>
@@ -19,7 +23,9 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Jun 09, 2011</h4>
+(see <a href="license.html">LICENSE</a> for copying permissions for this
+documentation)<br>
+Last updated Sep 07, 2011</h4>
 <table rules="none">
 <tr><td>
 <img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">

@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <!-- THIS PAGE IS AUTOMATICALLY GENERATED.  DO NOT EDIT. -->
-<!-- Thu Jun  9 23:38:37 2011 -->
+<!-- Wed Sep  7 17:09:46 2011 -->
 <!-- USING HT2HTML 2.0 -->
 <!-- SEE http://ht2html.sf.net -->
 <!-- User-specified headers:
@@ -63,6 +63,9 @@ Subsections
 <a href="credits.html">CREDITS</a>
 </td></tr>
 <tr><td bgcolor="#cdba96">
+<a href="license.html">LICENSE</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
 <a href="http://sourceforge.net"><img src="sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
 </td></tr>
 <tr><td bgcolor="#cdba96">&nbsp;
@@ -110,6 +113,13 @@ Links
 </td></tr>
 <tr><td bgcolor="#cdba96">&nbsp;
 <tr><td bgcolor="#b78900"><b><font color="#ffffff">
+Translations
+</font></b></td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://webhostingrating.com/libs/bmsi-milter-be">Belorussian</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">&nbsp;
+<tr><td bgcolor="#b78900"><b><font color="#ffffff">
 Email Us
 </font></b></td></tr>
 <tr><td bgcolor="#cdba96">
@@ -122,7 +132,21 @@ Email Us
 <!-- end of sidebar cell -->
 <!-- start of body cell -->
 <td valign="top" width="90%" class="body"><br>
+<!-- This is part of the Python Milter Applications documentation.
+ Copyright (C) 2001,2002,2003,2004,2005-2011 Business Management Systems, Inc.
+ See the file license.ht for copying conditions.  -->
+
 <h2> Recent Changes for the <code>pymilter</code> project </h2>
+
+<h3> 0.9.5 </h3>
+Print milter.error for invalid callback return type. (Since stacktrace is
+empty, the TypeError exception is confusing.)  Fix milter-template.py.
+It is not in the test suite and stopped working at some point - not
+good for example code.
+
+<h3> 0.9.4 </h3>
+Handle IP6 in Milter.utils.iniplist().  Support (and require for 
+RPM packages) python-2.6.
 
 <h3> 0.9.3 </h3>
 Handle source routes in Milter.util.parse_addr().
@@ -136,7 +160,6 @@ Auto-negotiate protocol steps.  Fix missing address of optional param to
 addrcpt().
 
 <h3> 0.9.0 </h3>
-
 Spec file change for Fedora:
 stop using INSTALLED_FILES to make Fedora happy,
 remove config flag from start.sh glue,
@@ -152,21 +175,35 @@ be useful to track reputation by nameserver to fight throwaway domains.
 
 <h2> Recent Changes for the <code>milter</code> project </h2>
 
-<h3> 0.8.12 </h3>
+<h3> 0.8.15 </h3>
+Support (and require for RPM packages) Python2.6.
 
+<h3> 0.8.14 </h3>
+Ignore zero length keywords (from_words, porn_words) - a disastrous typo.
+Ban generic domains for common subdomains.
+Allow illegal HELO from internal network for braindead copiers.
+Don't ban for multiple anonymous MFROM.
+Trust localhost not to be a zombie - sendmail sends from queue on localhost.
+Ban domains on best_guess pass.
+
+<h3> 0.8.13 </h3> 
+Default internal_policy to off.  Experimental banned domain list.
+Block DSN from internal connections, except for listed internal MTAs.
+BAN policy in access file bans connect IP.  Use DATA callback to improve SRS
+check.  
+
+<h3> 0.8.12 </h3>
 Use the pid file in the initscript.  Fix bugs with greylisting config
 and adjust demerits for HELO fail.  Add an SPF Pass policy.
 Can be used to ban a domain.
 
 <h3> 0.8.11 </h3>
-
 Greylisting is now supported.  Messages from the 'vacation' program
 are now recognized as autoreplies.  IPs of trusted relays (secondary
 MXes, for instance) are never banned.  Added ban2zone.py to 
 convert banned IP lists to BIND zonefile data.
 
 <h3> 0.8.10 </h3>
-
 SRS rejections now log the recipient.  
 I have finally implemented plain CBV (no DSN).  The CBV policy
 will do a plain CBV from now on, and the DSN policy is required
@@ -177,7 +214,6 @@ IPs are banned for too many bad MAIL FROMs or RCPT TOs, and remain banned
 for 7 days.
 
 <h3> 0.8.9 </h3>
-
 I use the <code>%ifarch</code> hack to build milter and milter-spf
 packages as noarch, while pymilter is built as native.
 
@@ -186,7 +222,6 @@ installing pyspf, and added a Milter.dns module to let python milters do
 general DNS lookups without loading pyspf.
 
 <h3> 0.8.8 </h3>
-
 Programs do not belong in the /var/log directory.  I moved the
 milter apps to /usr/lib/pymilter.  Since having the programs and
 data in the same directory is convenient for debugging, it will

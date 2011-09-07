@@ -1,4 +1,7 @@
 <!-- -*- html -*- -->
+<!-- This is part of the Python Milter Applications documentation.
+ Copyright (C) 2001,2002,2003,2004,2005-2011 Business Management Systems, Inc.
+ See the file license.ht for copying conditions.  -->
 <h3>Subsections</h3>
 <li><a href="milter.html">Introduction</a>
 <li><a href="changes.html">Changes</a>
@@ -10,6 +13,7 @@
 <li><a href="logmsgs.html">Log&nbsp;Messages</a>
 <li><a href="http://bmsi.com/mailman/listinfo/pymilter">Mailing&nbsp;List</a>
 <li><a href="credits.html">CREDITS</a>
+<li><a href="license.html">LICENSE</a>
 <li><a href="http://sourceforge.net"><img src="sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
 <h3>Links</h3>
 <li><a href="https://www.milter.org/developers/api/index">C&nbsp;API</a>
@@ -25,3 +29,5 @@
 <li><a href="http://bmsi.com/python/pygossip.html">pygossip</a>
 <li><a href="http://bmsi.com/python/dspam.html">pydspam</a>
 <li><a href="http://bmsi.com/libdspam/dspam.html">libdspam</a>
+<h3>Translations</h3>
+<li><a href="http://webhostingrating.com/libs/bmsi-milter-be">Belorussian</a>
