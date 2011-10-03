@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.174  2011/10/03 17:44:38  customdesigned
+# Fix SPF fail ip reported for IP6
+#
 # Revision 1.173  2011/06/16 20:54:48  customdesigned
 # Update to pydkim-0.4 and log verified domains
 #
@@ -882,6 +885,7 @@ class bmsMilter(Milter.Base):
     self.postmaster_reply = False
     self.orig_from = None
     self.has_dkim = False
+    self.dkim_domain = None
     if f == '<>' and internal_mta and self.internal_connection:
       if not iniplist(self.connectip,internal_mta):
         self.log("REJECT: pretend MTA at ",self.connectip,
@@ -1103,6 +1107,7 @@ class bmsMilter(Milter.Base):
 	  self.confidence = int(a[-1])
 	  self.umis = umis
 	  self.from_domain = domain
+	  self.from_qual = qual
 	  # We would like to reject on bad reputation here, but we
 	  # need to give special consideration to postmaster.  So
 	  # we have to wait until envrcpt().  Perhaps an especially
@@ -1110,7 +1115,7 @@ class bmsMilter(Milter.Base):
 	  if self.reputation < -70 and self.confidence > 5:
 	    self.log('REJECT: REPUTATION')
 	    return self.delay_reject('550','5.7.1',
-	      'Your domain has been sending nothing but spam')
+	      '%s has been sending nothing but spam'%domain)
 	  if self.reputation > 40 and self.confidence > 0:
 	    self.greylist = False
       except:
@@ -1721,17 +1726,17 @@ class bmsMilter(Milter.Base):
     if self.has_dkim:
       self.fp.seek(self.body_start)
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
+      res = False
       try:
         d = dkim.DKIM(txt,logger=milter_log)
 	res = d.verify()
       except dkim.DKIMException as x:
 	self.log('DKIM: %s'%x)
-        res = False
       except Exception as x:
-        res = False
 	milter_log.error("check_dkim: %s",x,exc_info=True)
       if res:
 	self.log('DKIM: Pass (%s)'%d.domain)
+        self.dkim_domain = d.domain
       else:
 	fd,fname = tempfile.mkstemp(".dkim")
 	with os.fdopen(fd,"w+b") as fp:
@@ -1822,7 +1827,7 @@ class bmsMilter(Milter.Base):
                     # check that sender accepts quarantine DSN
                     if self.spf_guess == 'pass':
                       msg = mime.message_from_file(StringIO.StringIO(txt))
-                      rc = self.send_dsn(self.spf,msg,'quarantine')
+                      rc = self.send_dsn(self.spf,msg,'quarantine',fail=True)
                       del msg
                     else:
                       rc = self.send_dsn(self.spf)
@@ -1893,7 +1898,7 @@ class bmsMilter(Milter.Base):
 	  if self.spf_guess == 'pass' or self.cbv_needed:
 	    msg = mime.message_from_file(self.fp)
 	    if self.spf_guess == 'pass':
-	      rc = self.send_dsn(self.spf,msg,'quarantine')
+	      rc = self.send_dsn(self.spf,msg,'quarantine',fail=True)
 	    else:
 	      rc = self.do_needed_cbv(msg)
 	    del msg
@@ -2201,7 +2206,11 @@ class bmsMilter(Milter.Base):
     if badrcpts: return badrcpts
     return None
 
-  def send_dsn(self,q,msg=None,template_name=None):
+  def send_dsn(self,q,msg=None,template_name=None,fail=False):
+    if fail:
+      if not self.notify: template_name = None
+    else:
+      if 'DELAY' not in self.notify: template_name = None
     if template_name and template_name.startswith('helo'):
       sender = 'postmaster@'+q.h
     else:
