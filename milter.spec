@@ -161,6 +161,9 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Mon Oct 03 2011 Stuart Gathman <stuart@bmsi.com> 0.8.16-1
+- DKIM
+
 * Thu Mar 03 2011 Stuart Gathman <stuart@bmsi.com> 0.8.15-1
 - Python2.6
 

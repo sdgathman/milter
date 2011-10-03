@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.175  2011/10/03 20:01:00  customdesigned
+# Let NOTIFY suppress real DSN.  Since notify is forged on forged email,
+# perhaps this should be an option.
+#
 # Revision 1.174  2011/10/03 17:44:38  customdesigned
 # Fix SPF fail ip reported for IP6
 #
@@ -901,6 +905,7 @@ class bmsMilter(Milter.Base):
     t = parse_addr(f)
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
+    self.efrom = self.canon_from
     # Some braindead MTAs can't be relied upon to properly flag DSNs.
     # This heuristic tries to recognize such.
     self.is_bounce = (f == '<>' or t[0].lower() in banned_users
@@ -939,7 +944,6 @@ class bmsMilter(Milter.Base):
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
     self.internal_domain = False
     self.umis = None
-    self.efrom = self.canon_from
     if len(t) == 2:
       user,domain = t
       for pat in internal_domains:
@@ -950,6 +954,7 @@ class bmsMilter(Milter.Base):
         try:
           newaddr = srs.reverse(self.canon_from)
           self.orig_from = newaddr
+          self.efrom = newaddr
           self.log("Original MFROM:",newaddr)
         except:
           self.log("REJECT: bad MFROM signature",self.canon_from)
@@ -984,7 +989,6 @@ class bmsMilter(Milter.Base):
       # effective from
       if self.orig_from:
         user,domain = self.orig_from.split('@')
-        self.efrom = self.orig_from
       if isbanned(domain,banned_domains):
         self.log("REJECT: banned domain",domain)
 	return self.delay_reject('550','5.7.1',
