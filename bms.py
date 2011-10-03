@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.173  2011/06/16 20:54:48  customdesigned
+# Update to pydkim-0.4 and log verified domains
+#
 # Revision 1.172  2011/06/07 22:24:38  customdesigned
 # Remove leftover tempname in envfrom.  Save failed DKIM
 #
@@ -1129,7 +1132,7 @@ class bmsMilter(Milter.Base):
       q = spf.query(self.connectip,self.canon_from,self.hello_name,
           receiver=receiver,strict=False)
       q.set_default_explanation(
-        'SPF fail: see http://openspf.org/why.html?sender=%s&ip=%s' % (q.s,q.i))
+        'SPF fail: see http://openspf.org/why.html?sender=%s&ip=%s' % (q.s,q.c))
       res,code,txt = q.check()
     q.result = res
     if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
@@ -1519,7 +1522,7 @@ class bmsMilter(Milter.Base):
 	else:
 	  if wild:
 	    a = domain.split('.')[wild:]
-	    if a: domain = '*.'+'.'.join(a)
+	    if len(a) > 1: domain = '*.'+'.'.join(a)
 	  self.log('BAN DOMAIN:',domain)
 	try:
 	  fp = open('banned_domains','at')
