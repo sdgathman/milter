@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.176  2011/10/03 20:07:16  customdesigned
+# Make wiretap use orig_from (set efrom to orig_from earlier).
+#
 # Revision 1.175  2011/10/03 20:01:00  customdesigned
 # Let NOTIFY suppress real DSN.  Since notify is forged on forged email,
 # perhaps this should be an option.
@@ -968,7 +971,8 @@ class bmsMilter(Milter.Base):
         else:
           policy = None
           # trust ourself not to be a zombie
-          if self.connectip.strip() == '127.0.0.1': policy = 'OK'
+          if self.trusted_relay or self.connectip.strip() == '127.0.0.1':
+            policy = 'OK'
         if policy:
           if policy != 'OK':
             self.log("REJECT: unauthorized user",self.user,
@@ -1717,10 +1721,10 @@ class bmsMilter(Milter.Base):
   def gossip_header(self):
     "Set UMIS from GOSSiP header."
     msg = email.message_from_file(self.fp)
-    gh = msg.get('x-gossip')
+    gh = msg.get_all('x-gossip')
     if gh:
-      self.log('X-GOSSiP:',gh)
-      self.umis,_ = gh.split(',',1)
+      self.log('X-GOSSiP:',gh[0])
+      self.umis,_ = gh[0].split(',',1)
     elif self.spf:
       domain = self.spf.o
       if domain:
