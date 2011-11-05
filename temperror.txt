@@ -20,7 +20,7 @@ Your DNS server is not responding to TXT queries.  In other words,
 it is BROKEN.  You need to get somebody to fix it ASAP.  We
 are attempting to do TXT queries to see if you have an SPF record.
 
-See http://openspf.org
+See http://openspf.net
 
 We are sending you this message to alert you to the fact that
 you have problems with your DNS.

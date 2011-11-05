@@ -126,6 +126,42 @@ class spfMilter(Milter.Base):
     t = parse_addr(f)
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
+
+    # Check SMTP AUTH, also available:
+    #   auth_authen  authenticated user
+    #   auth_author  (ESMTP AUTH= param)
+    #   auth_ssf     (connection security, 0 = unencrypted)
+    #   auth_type    (authentication method, CRAM-MD5, DIGEST-MD5, PLAIN, etc)
+    # cipher_bits  SSL encryption strength
+    # cert_subject SSL cert subject
+    # verify       SSL cert verified
+
+    self.user = self.getsymval('{auth_authen}')
+    if self.user:
+      # Very simple SMTP AUTH policy by default:
+      #   any successful authentication is considered INTERNAL
+      # Detailed authorization policy is configured in the access file below.
+      self.internal_connection = True
+      self.log(
+        "SMTP AUTH:",self.user, self.getsymval('{auth_type}'),
+        "sslbits =",self.getsymval('{cipher_bits}'),
+        "ssf =",self.getsymval('{auth_ssf}'), "INTERNAL"
+      )
+      # Restrict SMTP AUTH users to authorized domains
+      if self.internal_connection:
+        p = SPFPolicy('%s@%s'%(self.user,domain))
+        policy = p.getPolicy('smtp-auth:')
+        p.close()
+        if policy:
+          if policy != 'OK':
+            self.log("REJECT: unauthorized user",self.user,
+                "at",self.connectip,"sending MAIL FROM",self.canon_from)
+            self.setreply('550','5.7.1',
+              'SMTP user %s is not authorized to use MAIL FROM %s.' %
+              (self.user,self.canon_from)
+            )
+            return Milter.REJECT
+
     if not (self.internal_connection or self.trusted_relay) and self.connectip:
       rc = self.check_spf()
       if rc != Milter.CONTINUE: return rc
@@ -151,7 +187,7 @@ class spfMilter(Milter.Base):
       q = spf.query(self.connectip,self.canon_from,self.hello_name,
 	  receiver=receiver,strict=False)
       q.set_default_explanation(
-	'SPF fail: see http://openspf.org/why.html?sender=%s&ip=%s' % (q.s,q.i))
+	'SPF fail: see http://openspf.net/why.html?sender=%s&ip=%s' % (q.s,q.i))
       res,code,txt = q.check()
     if res not in ('pass','temperror'):
       if self.mailfrom != '<>':
@@ -212,7 +248,7 @@ class spfMilter(Milter.Base):
       if policy and policy == 'REJECT':
         self.log('REJECT NEUTRAL:',q.s)
 	self.setreply('550','5.7.1',
-  "%s requires an SPF PASS to accept mail from %s. [http://openspf.org]"
+  "%s requires an SPF PASS to accept mail from %s. [http://openspf.net]"
 	  % (receiver,q.s))
 	return Milter.REJECT
     elif res == 'pass':

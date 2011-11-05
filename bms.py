@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.177  2011/11/01 17:43:33  customdesigned
+# Trust trusted relay not to be a zombie.
+#
 # Revision 1.176  2011/10/03 20:07:16  customdesigned
 # Make wiretap use orig_from (set efrom to orig_from earlier).
 #
@@ -1079,7 +1082,7 @@ class bmsMilter(Milter.Base):
           self.log('REJECT: no PTR, HELO or SPF')
           self.offense() # ban ip if too many bad MFROMs
           return self.delay_reject('550','5.7.1',
-    "You must have a valid HELO or publish SPF: http://www.openspf.org ",
+    "You must have a valid HELO or publish SPF: http://www.openspf.net ",
     "Contact your mail administrator IMMEDIATELY!  Your mail server is ",
     "severely misconfigured.  It has no PTR record (dynamic PTR records ",
     "that contain your IP don't count), an invalid or dynamic HELO, ",
@@ -1145,7 +1148,7 @@ class bmsMilter(Milter.Base):
       q = spf.query(self.connectip,self.canon_from,self.hello_name,
           receiver=receiver,strict=False)
       q.set_default_explanation(
-        'SPF fail: see http://openspf.org/why.html?sender=%s&ip=%s' % (q.s,q.c))
+        'SPF fail: see http://openspf.net/why.html?sender=%s&ip=%s' % (q.s,q.c))
       res,code,txt = q.check()
     q.result = res
     if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
@@ -1206,7 +1209,7 @@ class bmsMilter(Milter.Base):
       if spf_best_guess and res == 'none':
         #self.log('SPF: no record published, guessing')
         q.set_default_explanation(
-                'SPF guess: see http://openspf.org/why.html')
+                'SPF guess: see http://openspf.net/why.html')
         # best_guess should not result in fail
         if self.missing_ptr:
           # ignore dynamic PTR for best guess
@@ -1247,7 +1250,7 @@ class bmsMilter(Milter.Base):
       if self.need_cbv(p.getNeutralPolicy(),q,'neutral'):
         self.log('REJECT: SPF neutral for',q.s)
         return self.delay_reject('550','5.7.1',
-          'mail from %s must pass SPF: http://openspf.org/why.html' % q.o,
+          'mail from %s must pass SPF: http://openspf.net/why.html' % q.o,
           'The %s domain is one that spammers love to forge.  Due to' % q.o,
           'the volume of forged mail, we can only accept mail that',
           'the SPF record for %s explicitly designates as legitimate.' % q.o,
@@ -1518,7 +1521,7 @@ class bmsMilter(Milter.Base):
       self.log('REJECT: bounce with no SRS encoding',rcpt)
       self.setreply('550','5.7.1',
         "I did not send you that message. Please consider implementing SPF",
-        "(http://openspf.org) to avoid bouncing mail to spoofed senders.",
+        "(http://openspf.net) to avoid bouncing mail to spoofed senders.",
         "Thank you."
       )
     return Milter.REJECT

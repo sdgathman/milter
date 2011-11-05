@@ -30,7 +30,7 @@ If you never sent the above message, then your domain has been forged.
 Your mail admin needs to publish a strict SPF record so that I can reject
 those forgeries instead of bugging you about them.  
 
-See http://openspf.org for details.
+See http://openspf.net for details.
 
 If you need further assistance, please do not hesitate to contact me.
 

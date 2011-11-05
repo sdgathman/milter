@@ -20,7 +20,7 @@
 <li><a href="http://www.milter.org/">Milter.Org</a>
 <li><a href="http://www.python.org/">Python.Org</a>
 <li><a href="http://www.sendmail.org/">Sendmail.Org</a>
-<li><a href="http://www.openspf.org/">SPF</a>
+<li><a href="http://www.openspf.net/">SPF</a>
 <li><a href="http://spidey2.bmsi.com/pymilter/">pymilter</a>
 <li><a href="pysrs.html">pysrs</a>
 <li><a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a>
