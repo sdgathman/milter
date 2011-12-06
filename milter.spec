@@ -148,6 +148,7 @@ fi
 %config(noreplace) %{datadir}/quarantine.txt
 %config(noreplace) %{datadir}/permerror.txt
 %config(noreplace) %{datadir}/temperror.txt
+%config(noreplace) %{datadir}/heloerror.txt
 %config(noreplace) /etc/mail/pymilter.cfg
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
