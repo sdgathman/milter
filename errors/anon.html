@@ -1,0 +1,15 @@
+Hello. I work for Business Management Systems in Fairfax, VA. There is a 
+problem with:
+<blockquote>
+     %mfrom
+</blockquote>
+The HELO name, <code>%helo</code>, is invalid (does not resolve to
+<code>%ip</code>).  There is no valid PTR record for <code>%ip</code> (does
+not exist or does not resolve to <code>%ip</code>.  Dynamic
+names for HELO or PTR do not count since you have no <a
+href="http://openspf.net">Sender Policy</a> either.
+<p>
+Contact your mail administrator IMMEDIATELY!  Your mail server is
+severely misconfigured.  (If you have a dynamic PTR/HELO, it is technically
+correct, but most email services reject dynamic PTR because it generally
+indicates a "bot", a compromised home PC that sends spam.)

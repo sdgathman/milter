@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.178  2011/11/05 16:05:08  customdesigned
+# Change openspf.org -> openspf.net
+#
 # Revision 1.177  2011/11/01 17:43:33  customdesigned
 # Trust trusted relay not to be a zombie.
 #
@@ -243,6 +246,7 @@ import shutil
 import gc
 import anydbm
 import smtplib
+import urllib
 import Milter.dsn as dsn
 from Milter.dynip import is_dynip as dynip
 from Milter.utils import \
@@ -376,6 +380,7 @@ banned_domains = set()
 greylist = None
 UNLIMITED = 0x7fffffff
 max_demerits = UNLIMITED
+errors_url = "http://bmsi.com/cgi-bin/errors.cgi"
 
 logging.basicConfig(
         stream=sys.stdout,
@@ -390,6 +395,7 @@ def read_config(list):
     'tempdir': "/var/log/milter/save",
     'datadir': "/var/lib/milter",
     'socket': "/var/run/milter/pythonsock",
+    'errors_url': "http://bmsi.com/cgi-bin/errors.cgi",
     'scan_html': 'no',
     'scan_rfc822': 'yes',
     'scan_zip': 'no',
@@ -426,6 +432,7 @@ def read_config(list):
   hello_blacklist = cp.getlist('milter','hello_blacklist')
   case_sensitive_localpart = cp.getboolean('milter','case_sensitive_localpart')
   max_demerits = cp.getintdefault('milter','max_demerits',UNLIMITED)
+  errors_url = cp.get('milter','errors_url')
 
   # defang section
   global scan_rfc822, scan_html, block_chinese, scan_zip, block_forward
@@ -748,11 +755,11 @@ class bmsMilter(Milter.Base):
     self.new_headers.append((name,val,idx))
     self.log('%s: %s' % (name,val))
 
-  def delay_reject(self,*args):
+  def delay_reject(self,*args,**kw):
     if delayed_reject:
-      self.reject = args
+      self.reject = (args,kw)
       return Milter.CONTINUE
-    self.setreply(*args)
+    self.htmlreply(*args,**kw)
     return Milter.REJECT
 
   def connect(self,hostname,unused,hostaddr):
@@ -998,8 +1005,7 @@ class bmsMilter(Milter.Base):
         user,domain = self.orig_from.split('@')
       if isbanned(domain,banned_domains):
         self.log("REJECT: banned domain",domain)
-	return self.delay_reject('550','5.7.1',
-	  '%s has been identified as a spammer domain.')
+	return self.delay_reject('550','5.7.1',template='bandom',domain=domain)
       if self.internal_connection:
         wl_users = whitelist_senders.get(domain,())
         if user in wl_users or '' in wl_users:
@@ -1081,13 +1087,8 @@ class bmsMilter(Milter.Base):
       if self.policy in ('REJECT', 'BAN'):
           self.log('REJECT: no PTR, HELO or SPF')
           self.offense() # ban ip if too many bad MFROMs
-          return self.delay_reject('550','5.7.1',
-    "You must have a valid HELO or publish SPF: http://www.openspf.net ",
-    "Contact your mail administrator IMMEDIATELY!  Your mail server is ",
-    "severely misconfigured.  It has no PTR record (dynamic PTR records ",
-    "that contain your IP don't count), an invalid or dynamic HELO, ",
-    "and no SPF record."
-          )
+          return self.delay_reject(template='anon',
+                mfrom=self.efrom,helo=self.hello_name,ip=self.connectip)
       if domain and rc == Milter.CONTINUE \
 	  and not (self.internal_connection or self.trusted_relay):
 	rc = self.create_gossip(domain,res,hres)
@@ -1125,8 +1126,8 @@ class bmsMilter(Milter.Base):
 	  # bad reputation could be rejected here.
 	  if self.reputation < -70 and self.confidence > 5:
 	    self.log('REJECT: REPUTATION')
-	    return self.delay_reject('550','5.7.1',
-	      '%s has been sending nothing but spam'%domain)
+	    return self.delay_reject('550','5.7.1',template='illrepute',
+                domain=domain,score=self.reputation,qual=qual)
 	  if self.reputation > 40 and self.confidence > 0:
 	    self.greylist = False
       except:
@@ -1550,7 +1551,8 @@ class bmsMilter(Milter.Base):
   def data(self):
     if self.reject:
       self.log("DELAYED REJECT")
-      self.setreply(*self.reject)
+      args,kw = self.reject
+      self.htmlreply(*args,**kw)
       return Milter.REJECT
     if not self.data_allowed:
       return self.forged_bounce()
@@ -1974,6 +1976,8 @@ class bmsMilter(Milter.Base):
     elif policy == 'DSN':
       if self.mailfrom != '<>' and not self.cbv_needed:
         self.cbv_needed = (q,tname)
+    elif policy == 'WHITELIST':
+        self.whitelist = True
     elif policy != 'OK':
       if policy == 'BAN':
 	self.offense(inc=3)
@@ -2217,6 +2221,18 @@ class bmsMilter(Milter.Base):
     if badrcpts: return badrcpts
     return None
 
+  def htmlreply(self,code='550',xcode='5.7.1',*msg,**kw):
+    if 'template' in kw:
+      template = kw['template']
+      del kw['template']
+      desc = "%s/%s?%s" % (errors_url,template,urllib.urlencode(kw))
+      self.setreply(code,xcode,desc.replace('%','%%'),*msg)
+    else:
+      try:
+        self.setreply(code,xcode,*msg)
+      except ValueError,x:
+        self.log(x)
+
   def send_dsn(self,q,msg=None,template_name=None,fail=False):
     if fail:
       if not self.notify: template_name = None
@@ -2266,7 +2282,7 @@ class bmsMilter(Milter.Base):
       cbv_cache[sender] = res
       self.log('REJECT:',desc)
       try:
-        self.setreply('550','5.7.1',*desc.splitlines())
+        self.htmlreply(mfrom=sender,msg=res[1],template='dsnrefused')
       except TypeError:
         self.setreply('550','5.7.1',"Callback failure")
       return Milter.REJECT

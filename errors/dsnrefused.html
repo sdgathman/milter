@@ -1,0 +1,53 @@
+Hello. I work for Business Management Systems in Fairfax, VA. There is a 
+problem with:
+<blockquote>
+     %mfrom
+</blockquote>
+not accepting DSNs for emails sent from that domain.
+<p>
+We and possibly many other ISPs require mail servers contacting us to follow
+the minimum requirements for the functioning of mail over the Internet by
+adhering to RFC 2821 (and others), which requires that a mail server accept for
+the purpose of error reporting the null email address ("&lt;&gt;") in the
+<code>MAIL FROM:</code> command. See
+<dl>
+<dt>RFC 2821
+<dd> section 4.1.1.2 MAIL (BNF grammar)<br>
+     section 6.1 Reliable Delivery and Replies by Email (para. 2)<br>
+     ftp://ftp.rfc-editor.org/in-notes/rfc2821.txt
+<dt>RFC 2505
+<dd> section 2. Recommendations 6a)<br>
+     section 2.6.1. "MAIL From: &lt;&gt;"<br>
+     ftp://ftp.rfc-editor.org/in-notes/rfc2505.txt
+<dt>RFC 1123
+<dd> section 5.2.9 Command Syntax: RFC-821 Section 4.1.2<br>
+     ftp://ftp.rfc-editor.org/in-notes/rfc1123.txt
+<dt>RFC 821 (obsoleted by RFC 2821)
+<dd> section 4.1.2
+     ftp://ftp.rfc-editor.org/in-notes/rfc821.txt
+</dl>
+Your domain "%mfrom" no longer accepts &lt;&gt;. The need for the 
+null address ("&lt;&gt;") as an error reporting tool for mail server software
+is VERY important to the correct functioning of mail over the Internet. It 
+provides legitimate users a means of find out if mail failed to arrive at 
+its intended destination. Blocking this for the purpose of spam control is 
+unacceptable, because legitimate users will never know that mail might 
+have been rejected because they simply mistyped the destination address, 
+or that a mail box is full, or no longer active, etc.  You can control
+forged DSNs by using a
+<a href="http://en.wikipedia.org/wiki/Bounce_Address_Tag_Validation">
+BATV scheme</a>.
+<p>
+Furthermore, many ESPs, for example verizon.net, validate the return-path
+of incoming emails by calling back to an MX for the domain.  With
+DSNs not functioning, you will be unable to send emails to verizon.net
+and other mail servers that valid the return-path.
+<p>
+We ask if you would kindly contact those responsible for the
+"%mfrom" mail servers or if you have the means yourselves to 
+resolve the issue so that "%mfrom" remains RFC compliant with 
+respect to the use of the null address ("&lt;&gt;").  It is only a matter of
+time before some very important email goes undelivered and no one
+is notified of the problem.
+<p>
+Thank you for your time and attention in this matter,
