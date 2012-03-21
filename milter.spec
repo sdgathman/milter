@@ -3,7 +3,7 @@
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
 %define __python python2.6
-%define pythonbase python26
+%define pythonbase python
 %define sysvinit milter.rc
 %define libdir %{_libdir}/pymilter
 %define logdir /var/log/milter
@@ -12,7 +12,7 @@
 Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Version: 0.8.15
+Version: 0.8.16
 Release: 1%{dist}.py26
 Source: milter-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
@@ -164,6 +164,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Mon Oct 03 2011 Stuart Gathman <stuart@bmsi.com> 0.8.16-1
 - DKIM
+- Reference templated URLs in error messages
 
 * Thu Mar 03 2011 Stuart Gathman <stuart@bmsi.com> 0.8.15-1
 - Python2.6
