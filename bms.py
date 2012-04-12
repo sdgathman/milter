@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.179  2012/02/25 22:21:16  customdesigned
+# Support urls with fuller explanation for rejections.
+#
 # Revision 1.178  2011/11/05 16:05:08  customdesigned
 # Change openspf.org -> openspf.net
 #
@@ -1035,7 +1038,8 @@ class bmsMilter(Milter.Base):
       if rc != Milter.CONTINUE:
         if rc != Milter.TEMPFAIL: self.offense()
         return rc
-      self.greylist = True
+      # no point greylisting for MTAs where we trust Received header
+      self.greylist = not self.trust_received and not self.whitelist
     else:
       if spf and internal_policy and self.internal_connection:
         q = spf.query(self.connectip,self.canon_from,self.hello_name,
@@ -1144,6 +1148,7 @@ class bmsMilter(Milter.Base):
         res,code,txt = q.best_guess('v=spf1 a mx')
       if res == 'pass':
         self.log("TRUSTED_FORWARDER:",tf)
+	self.whitelist = True
         break
     else:
       q = spf.query(self.connectip,self.canon_from,self.hello_name,
