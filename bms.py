@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.180  2012/04/12 05:37:25  customdesigned
+# Skip greylisting for trusted forwarders
+#
 # Revision 1.179  2012/02/25 22:21:16  customdesigned
 # Support urls with fuller explanation for rejections.
 #
@@ -384,6 +387,9 @@ greylist = None
 UNLIMITED = 0x7fffffff
 max_demerits = UNLIMITED
 errors_url = "http://bmsi.com/cgi-bin/errors.cgi"
+dkim_key = None
+dkim_selector = None
+dkim_domain = None
 
 logging.basicConfig(
         stream=sys.stdout,
@@ -567,6 +573,19 @@ def read_config(list):
     grey_expire = cp.getintdefault('greylist','expire',6)
     grey_time = cp.getintdefault('greylist','time',5)
     greylist = Greylist(grey_db,grey_time,grey_expire,grey_days)
+
+  # DKIM section
+  if cp.has_option('dkim','privkey'):
+    global dkim_key,dkim_selector,dkim_domain
+    dkim_keyfile = cp.getdefault('dkim','privkey')
+    dkim_selector = cp.getdefault('dkim','selector','default')
+    dkim_domain = cp.getdefault('dkim','domain')
+    if dkim_keyfile and dkim_domain:
+      try:
+	with open(dkim_keyfile,'r') as kf:
+	  dkim_key = kf.read()
+      except:
+	milter_log.error('Unable to read: %s',dkim_keyfile)
 
 def findsrs(fp):
   lastln = None
@@ -1740,8 +1759,22 @@ class bmsMilter(Milter.Base):
       if domain:
 	self.create_gossip(domain,self.spf_guess,self.spf_helo)
 
+  def sign_dkim(self):
+    user,domain = self.canon_from.split('@')
+    if dkim_key and domain == dkim_domain:
+      self.fp.seek(self.body_start)
+      txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
+      try:
+        d = dkim.DKIM(txt,logger=milter_log)
+	h = d.sign('default',domain,dkim_key,canonicalize=('relaxed','simple'))
+	name,val = h.split(':',1)
+        self.addheader(name,val)
+      except dkim.DKIMException as x:
+	self.log('DKIM: %s'%x)
+      except Exception as x:
+	milter_log.error("sign_dkim: %s",x,exc_info=True)
+      
   def check_dkim(self):
-    if self.has_dkim:
       self.fp.seek(self.body_start)
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
       res = False
@@ -2041,7 +2074,10 @@ class bmsMilter(Milter.Base):
           self.log('BLACKLIST:',sender,fname)
           return Milter.DISCARD
       
-      self.check_dkim()
+      if self.has_dkim:
+	self.check_dkim()
+      elif self.internal_connection:
+        self.sign_dkim()
 
       # analyze external mail for spam
       spam_checked = self.check_spam()  # tag or quarantine for spam
