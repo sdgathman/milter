@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# dkim-milter	This shell script starts and stops dkim-milter.
+#
+# chkconfig: 2345 80 30
+# description: a process that checks DKIM for messages sent through sendmail.
+# processname: dkim-milter
+# config: /etc/mail/dkim-milter.cfg
+# pidfile: /var/run/milter/dkim-milter.pid
+
+python="python2.6"
+
+pidof() {
+	set - ""
+	if set - `ps -e -o pid,cmd | grep "${python} dkim-milter.py"` &&
+	  [ "$2" != "grep" ]; then
+	  echo $1
+	  return 0
+	fi
+	return 1
+}
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+[ -x /usr/lib/pymilter/start.sh ] || exit 0
+
+RETVAL=0
+prog="dkim-milter"
+
+start() {
+	# Start daemons.
+
+	echo -n "Starting $prog: "
+        if ! test -d /var/run/milter; then
+		mkdir -p /var/run/milter
+		chown mail:mail /var/run/milter
+	fi
+	daemon --check milter --user mail /usr/lib/pymilter/start.sh dkim-milter
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/dkim-milter
+	return $RETVAL
+}
+
+stop() {
+	# Stop daemons.
+	echo -n "Shutting down $prog: "
+	killproc milter
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/dkim-milter
+	return $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	stop
+	start
+	RETVAL=$?
+	;;
+  condrestart)
+	if [ -f /var/lock/subsys/dkim-milter ]; then
+	    stop
+	    start
+	    RETVAL=$?
+	fi
+	;;
+  status)
+	status dkim-milter
+	RETVAL=$?
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|condrestart|status}"
+	exit 1
+esac
+
+exit $RETVAL

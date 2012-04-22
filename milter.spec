@@ -36,14 +36,24 @@ bayesian filtering.
 
 %package spf
 Group: Applications/System
-Summary:  BMS spam and reputation milter
-Requires: %{pythonbase}-pyspf >= 2.0.4, %{pythonbase}-pymilter >= 0.9.4
+Summary:  Simple SPF milter
+Requires: %{pythonbase}-pyspf >= 2.0.5, %{pythonbase}-pymilter >= 0.9.6
 Obsoletes: pymilter-spf < 0.8.10
 
 %description spf
 A simple mail filter to add Received-SPF headers and reject forged mail.
 Rejection policy is configured via sendmail access file and can be
 tailored by domain.
+
+%package dkim
+Group: Applications/System
+Summary:  Simple DKIM milter
+Requires: %{pythonbase}-pydkim >= 0.5.1, %{pythonbase}-pymilter >= 0.9.6
+
+%description dkim
+A simple mail filter to add and verify DKIM-Signature headers and reject
+forged mail based on policy.  Rejection policy is configured via sendmail
+access file and can be tailored by domain.
 
 %prep
 %setup -q -n milter-%{version}
@@ -59,6 +69,7 @@ cp *.txt $RPM_BUILD_ROOT%{datadir}
 cp -p bms.py spfmilter.py ban2zone.py $RPM_BUILD_ROOT%{libdir}
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 cp spfmilter.cfg $RPM_BUILD_ROOT/etc/mail
+cp dkim-milter.cfg $RPM_BUILD_ROOT/etc/mail
 
 # logfile rotation
 mkdir -p $RPM_BUILD_ROOT/etc/logrotate.d
@@ -94,6 +105,7 @@ chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 cp %{sysvinit} $RPM_BUILD_ROOT/etc/rc.d/init.d/milter
 cp spfmilter.rc $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter
+cp dkim-milter.rc $RPM_BUILD_ROOT/etc/rc.d/init.d/dkim-milter
 ed $RPM_BUILD_ROOT/etc/rc.d/init.d/milter <<'EOF'
 /^python=/
 c
@@ -103,6 +115,14 @@ w
 q
 EOF
 ed $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter <<'EOF'
+/^python=/
+c
+python="%{__python}"
+.
+w
+q
+EOF
+ed $RPM_BUILD_ROOT/etc/rc.d/init.d/dkim-milter <<'EOF'
 /^python=/
 c
 python="%{__python}"
@@ -129,6 +149,14 @@ fi
 %preun spf
 if [ $1 = 0 ]; then
   /sbin/chkconfig --del spfmilter
+fi
+%post dkim
+#echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
+/sbin/chkconfig --add dkim-milter
+
+%preun dkim
+if [ $1 = 0 ]; then
+  /sbin/chkconfig --del dkim-milter
 fi
 
 %files 
@@ -158,12 +186,20 @@ fi
 %config(noreplace) /etc/mail/spfmilter.cfg
 /etc/rc.d/init.d/spfmilter
 
+%files dkim
+%defattr(-,root,root)
+%{libdir}/dkim-milter.py*
+%config(noreplace) /etc/mail/dkim-milter.cfg
+/etc/rc.d/init.d/dkim-milter
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
-* Mon Oct 03 2011 Stuart Gathman <stuart@bmsi.com> 0.8.16-1
-- DKIM
+* Sat Apr 21 2012 Stuart Gathman <stuart@bmsi.com> 0.8.16-1
+- simple DKIM milter as another sample
+- basic DKIM signing support
+- experimental DKIM support
 - Reference templated URLs in error messages
 
 * Thu Mar 03 2011 Stuart Gathman <stuart@bmsi.com> 0.8.15-1

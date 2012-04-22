@@ -278,5 +278,5 @@ X%s,        S=local:%s
 See the sendmail README for libmilter.
 sample spfmilter startup""" % (miltername,miltername,socketname)
   sys.stdout.flush()
-  Milter.runmilter("pyspffilter",socketname,240)
+  Milter.runmilter(miltername,socketname,240)
   print "sample spfmilter shutdown"

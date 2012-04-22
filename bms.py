@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.181  2012/04/19 23:20:05  customdesigned
+# Simple DKIM signing support
+#
 # Revision 1.180  2012/04/12 05:37:25  customdesigned
 # Skip greylisting for trusted forwarders
 #
@@ -1766,7 +1769,8 @@ class bmsMilter(Milter.Base):
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
       try:
         d = dkim.DKIM(txt,logger=milter_log)
-	h = d.sign('default',domain,dkim_key,canonicalize=('relaxed','simple'))
+	h = d.sign(dkim_selector,domain,dkim_key,
+                canonicalize=('relaxed','simple'))
 	name,val = h.split(':',1)
         self.addheader(name,val)
       except dkim.DKIMException as x:
