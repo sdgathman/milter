@@ -10,13 +10,14 @@
 import sys
 import Milter
 import dkim
+import authres
 import logging
 import logging.config
 import os
 import tempfile
 import StringIO
 from Milter.config import MilterConfigParser
-from Milter.utils import iniplist,parse_addr
+from Milter.utils import iniplist,parse_addr,parseaddr
 
 class Config(object):
   "Hold configuration options."
@@ -96,6 +97,8 @@ class dkimMilter(Milter.Base):
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
     self.user = self.getsymval('{auth_authen}')
+    self.has_dkim = False
+    self.author = None
     if self.user:
       # Very simple SMTP AUTH policy by default:
       #   any successful authentication is considered INTERNAL
@@ -110,6 +113,13 @@ class dkimMilter(Milter.Base):
 
   @Milter.noreply
   def header(self,name,val):
+    lname = name.lower()
+    if not self.has_dkim and lname == 'dkim-signature':
+      self.log("%s: %s" % (name,val))
+      self.has_dkim = True
+    if lname == 'from':
+      fname,self.author = parseaddr(val)
+      self.log("%s: %s" % (name,val))
     if self.fp:
       self.fp.write("%s: %s\n" % (name,val))
     return Milter.CONTINUE
@@ -136,8 +146,18 @@ class dkimMilter(Milter.Base):
     txt = self.fp.read()
     if self.internal_connection:
       self.sign_dkim(txt)
-    else:
-      self.check_dkim(txt)
+    elif self.has_dkim:
+      if self.check_dkim(txt):
+        result = 'pass'
+      else:
+        result = 'fail'
+      dkim_res = authres.DKIMAuthenticationResult(result=result,
+	header_i = self.header_i, header_d = self.header_d,
+	result_comment = self.dkim_comment)
+      h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
+	results=[dkim_res])
+      self.log(h)
+      self.addheader(*str(h).split(': ',1))
     return Milter.CONTINUE
 
   def sign_dkim(self,txt):
@@ -156,15 +176,23 @@ class dkimMilter(Milter.Base):
   def check_dkim(self,txt):
       res = False
       conf = self.conf
+      d = dkim.DKIM(txt,logger=conf.log)
       try:
-        d = dkim.DKIM(txt,logger=conf.log)
 	res = d.verify()
+	if res:
+	  self.dkim_comment = 'Good signature.'
+	else:
+	  self.dkim_comment = 'Bad signature.'
       except dkim.DKIMException as x:
-	self.log('DKIM: %s'%x)
+	self.dkim_comment = str(x)
+	#self.log('DKIM: %s'%x)
       except Exception as x:
+	self.dkim_comment = str(x)
 	conf.log.error("check_dkim: %s",x,exc_info=True)
+      self.header_i = d.signature_fields.get(b'i')
+      self.header_d = d.signature_fields.get(b'd')
       if res:
-	self.log('DKIM: Pass (%s)'%d.domain)
+	#self.log('DKIM: Pass (%s)'%d.domain)
         self.dkim_domain = d.domain
       else:
 	fd,fname = tempfile.mkstemp(".dkim")
