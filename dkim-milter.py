@@ -14,6 +14,7 @@ import logging
 import logging.config
 import os
 import tempfile
+import StringIO
 from Milter.config import MilterConfigParser
 from Milter.utils import iniplist,parse_addr
 
@@ -33,6 +34,7 @@ def read_config(list):
         os.chdir(cp.get('milter','datadir'))
   conf = Config()
   conf.log = logging.getLogger('dkim-milter')
+  conf.log.info('logging started')
   conf.socketname = cp.getdefault('milter','socketname', '/tmp/dkimmiltersock')
   conf.miltername = cp.getdefault('milter','name','pydkimfilter')
   conf.internal_connect = cp.getlist('milter','internal_connect')
@@ -40,7 +42,7 @@ def read_config(list):
   if cp.has_option('dkim','privkey'):
     conf.keyfile = cp.getdefault('dkim','privkey')
     conf.selector = cp.getdefault('dkim','selector','default')
-    conf.domain = cp.getlist('dkim','domain')
+    conf.domain = cp.getdefault('dkim','domain')
     if conf.keyfile and conf.domain:
       try:
 	with open(conf.keyfile,'r') as kf:
@@ -109,7 +111,7 @@ class dkimMilter(Milter.Base):
   @Milter.noreply
   def header(self,name,val):
     if self.fp:
-      self.fp.write("%s: %s\n" % (name,hval))
+      self.fp.write("%s: %s\n" % (name,val))
     return Milter.CONTINUE
 
   @Milter.noreply
