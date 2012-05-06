@@ -103,15 +103,21 @@ class dkimMilter(Milter.Base):
     self.has_dkim = False
     self.author = None
     self.arheaders = []
+    self.arresults = []
     if self.user:
       # Very simple SMTP AUTH policy by default:
       #   any successful authentication is considered INTERNAL
-      # Detailed authorization policy is configured in the access file below.
       self.internal_connection = True
+      auth_type = self.getsymval('{auth_type}')
+      ssl_bits =  self.getsymval('{cipher_bits}')
       self.log(
-        "SMTP AUTH:",self.user, self.getsymval('{auth_type}'),
-        "sslbits =",self.getsymval('{cipher_bits}'),
+        "SMTP AUTH:",self.user,"sslbits =",ssl_bits, auth_type,
         "ssf =",self.getsymval('{auth_ssf}'), "INTERNAL"
+      )
+      # Detailed authorization policy is configured in the access file below.
+      self.arresults.append(
+        authres.SMTPAUTHAuthenticationResult(result = 'pass',
+      	result_comment = auth_type+' sslbits='+ssl_bits, smtp_auth = self.user)
       )
     return Milter.CONTINUE
 
@@ -159,6 +165,7 @@ class dkimMilter(Milter.Base):
 	  adsp = m
     # Remove existing Authentication-Results headers
     for i,val in enumerate(self.arheaders,1):
+      # FIXME: don't delete A-T headers from trusted MTAs
       #authres.parse_value(val) # needs to be unfolded
       self.chgheader('authentication-results',i,'')
     # Check or sign DKIM
@@ -166,26 +173,23 @@ class dkimMilter(Milter.Base):
     if self.internal_connection:
       txt = self.fp.read()
       self.sign_dkim(txt)
-      result = 'pass'
+      result = None
     elif self.has_dkim:
       txt = self.fp.read()
       if self.check_dkim(txt):
         result = 'pass'
       else:
         result = 'fail'
-      dkim_res = authres.DKIMAuthenticationResult(result=result,
-	header_i = self.header_i, header_d = self.header_d,
-	result_comment = self.dkim_comment)
-      h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
-	results=[dkim_res])
-      self.log(h)
-      name,val = str(h).split(': ',1)
-      self.addheader(name,val,0)
+      self.arresults.append(
+        authres.DKIMAuthenticationResult(result=result,
+	  header_i = self.header_i, header_d = self.header_d,
+	  result_comment = self.dkim_comment)
+      )
     else:
       result = 'none'
     # Check if local reject policy and ADSP indicate message should be rejected
     lp = self.conf.reject	# local policy
-    if lp and result != 'pass':
+    if lp and result and result != 'pass':
       p = adsp['dkim']		# author domain policy
       if lp == p or p == 'discardable' and lp == 'all':
         if result == 'none':
@@ -196,6 +200,12 @@ class dkimMilter(Milter.Base):
 	  '%s DKIM signature for %s with ADSP dkim=%s'%(t,self.author,p))
 	self.log('REJECT: %s DKIM signature'%t)
 	return Milter.REJECT
+    if self.arresults:
+      h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
+	results=self.arresults)
+      self.log(h)
+      name,val = str(h).split(': ',1)
+      self.addheader(name,val,0)
     return Milter.CONTINUE
 
   def sign_dkim(self,txt):
