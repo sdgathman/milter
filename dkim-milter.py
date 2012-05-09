@@ -18,6 +18,7 @@ import logging.config
 import os
 import tempfile
 import StringIO
+import re
 from Milter.config import MilterConfigParser
 from Milter.utils import iniplist,parse_addr,parseaddr
 
@@ -55,6 +56,7 @@ def read_config(list):
 	conf.log.error('Unable to read: %s',conf.keyfile)
   return conf
 
+FWS = re.compile(r'\r?\n[ \t]+')
   
 class dkimMilter(Milter.Base):
   "Milter to check and sign DKIM.  Each connection gets its own instance."
@@ -163,11 +165,13 @@ class dkimMilter(Milter.Base):
 	if m.has_key('dkim'):
 	  self.log(s)
 	  adsp = m
-    # Remove existing Authentication-Results headers
+    # Remove existing Authentication-Results headers for our authserv_id
     for i,val in enumerate(self.arheaders,1):
-      # FIXME: don't delete A-T headers from trusted MTAs
-      #authres.parse_value(val) # needs to be unfolded
-      self.chgheader('authentication-results',i,'')
+      # FIXME: don't delete A-R headers from trusted MTAs
+      ar = authres.AuthenticationResultsHeader.parse_value(FWS.sub('',val))
+      if ar.authserv_id == self.receiver:
+	self.chgheader('authentication-results',i,'')
+	self.log('REMOVE: ',val)
     # Check or sign DKIM
     self.fp.seek(0)
     if self.internal_connection:
@@ -214,7 +218,7 @@ class dkimMilter(Milter.Base):
         d = dkim.DKIM(txt,logger=conf.log)
 	h = d.sign(conf.selector,conf.domain,conf.key,
                 canonicalize=('relaxed','simple'))
-	name,val = h.split(':',1)
+	name,val = h.split(': ',1)
         self.addheader(name,val.strip(),0)
       except dkim.DKIMException as x:
 	self.log('DKIM: %s'%x)
