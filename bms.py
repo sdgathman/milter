@@ -292,6 +292,10 @@ except: spf = None
 try: import dkim
 except: dkim = None
 
+# Import authres if available
+try: import authres
+except: authres = None
+
 # Sometimes, MTAs reply to our DSN.  We recognize this type of reply/DSN
 # and check for the original recipient SRS encoded in Message-ID.
 # If found, we blacklist that recipient.
@@ -928,6 +932,7 @@ class bmsMilter(Milter.Base):
     self.orig_from = None
     self.has_dkim = False
     self.dkim_domain = None
+    self.arresults = []
     if f == '<>' and internal_mta and self.internal_connection:
       if not iniplist(self.connectip,internal_mta):
         self.log("REJECT: pretend MTA at ",self.connectip,
@@ -938,6 +943,10 @@ class bmsMilter(Milter.Base):
         'send return receipts, use a more standards compliant email client.'
         )
         return Milter.REJECT
+    if authres and not self.missing_ptr: self.arresults.append(
+	authres.IPRevAuthenticationResult(result = 'pass',
+	  policy_iprev=self.connectip,policy_iprev_comment=self.connecthost)
+    )
     if self.canon_from:
       self.reject = None	# reset delayed reject seen after mail from
     t = parse_addr(f)
@@ -969,6 +978,19 @@ class bmsMilter(Milter.Base):
         "SMTP AUTH:",self.user, self.getsymval('{auth_type}'),
         "sslbits =",self.getsymval('{cipher_bits}'),
         "ssf =",self.getsymval('{auth_ssf}'), "INTERNAL"
+      )
+      auth_type = self.getsymval('{auth_type}')
+      ssl_bits =  self.getsymval('{cipher_bits}')
+      self.log(
+        "SMTP AUTH:",self.user,"sslbits =",ssl_bits, auth_type,
+        "ssf =",self.getsymval('{auth_ssf}'), "INTERNAL"
+      )
+      # Detailed authorization policy is configured in the access file below.
+      if authres: self.arresults.append(
+	authres.SMTPAUTHAuthenticationResult(result = 'pass',
+	  result_comment = auth_type+' sslbits='+ssl_bits,
+	  smtp_auth = self.user
+	)
       )
       if self.getsymval('{verify}'):
         self.log("SSL AUTH:",
@@ -1178,6 +1200,12 @@ class bmsMilter(Milter.Base):
       q.set_default_explanation(
         'SPF fail: see http://openspf.net/why.html?sender=%s&ip=%s' % (q.s,q.c))
       res,code,txt = q.check()
+      if authres: self.arresults.append(
+	authres.SPFAuthenticationResult(result = res, result_comment = txt,
+	  smtp_mailfrom = self.canon_from,
+	  smtp_helo = self.hello_name
+	)
+      )
     q.result = res
     if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
       self.cbv_needed = (q,'permerror') # report SPF syntax error to sender
@@ -1763,16 +1791,18 @@ class bmsMilter(Milter.Base):
 	self.create_gossip(domain,self.spf_guess,self.spf_helo)
 
   def sign_dkim(self):
-    user,domain = self.canon_from.split('@')
+    if self.canon_from:
+      user,domain = self.canon_from.split('@')
+    elif dkim_domain:
+      domain = dkim_domain
     if dkim_key and domain == dkim_domain:
       self.fp.seek(self.body_start)
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
       try:
         d = dkim.DKIM(txt,logger=milter_log)
-	h = d.sign(dkim_selector,domain,dkim_key,
-                canonicalize=('relaxed','simple'))
+	h = d.sign('default',domain,dkim_key,canonicalize=('relaxed','simple'))
 	name,val = h.split(':',1)
-        self.addheader(name,val)
+        self.addheader(name,val.strip(),0)
       except dkim.DKIMException as x:
 	self.log('DKIM: %s'%x)
       except Exception as x:
@@ -1782,21 +1812,33 @@ class bmsMilter(Milter.Base):
       self.fp.seek(self.body_start)
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
       res = False
+      result = 'fail'
+      d = dkim.DKIM(txt,logger=milter_log)
       try:
-        d = dkim.DKIM(txt,logger=milter_log)
 	res = d.verify()
+	if res:
+	  dkim_comment = 'Good signature.'
+          self.dkim_domain = d.domain
+	  result = 'pass'
+	else:
+	  dkim_comment = 'Bad signature.'
       except dkim.DKIMException as x:
-	self.log('DKIM: %s'%x)
+	dkim_comment = str(x)
+	#self.log('DKIM: %s'%x)
       except Exception as x:
+	dkim_comment = str(x)
 	milter_log.error("check_dkim: %s",x,exc_info=True)
-      if res:
-	self.log('DKIM: Pass (%s)'%d.domain)
-        self.dkim_domain = d.domain
-      else:
-	fd,fname = tempfile.mkstemp(".dkim")
-	with os.fdopen(fd,"w+b") as fp:
-	  fp.write(txt)
-	self.log('DKIM: Fail (saved as %s)'%fname)
+      if authres: self.arresults.append(
+        authres.DKIMAuthenticationResult(result=result,
+	  result_comment = dkim_comment,
+          header_i=d.signature_fields.get(b'i'),
+	  header_d=d.signature_fields.get(b'd')
+	)
+      )
+      fd,fname = tempfile.mkstemp(".dkim")
+      with os.fdopen(fd,"w+b") as fp:
+	fp.write(txt)
+      self.log('DKIM: Fail (saved as %s)'%fname)
       return res
 
   # check spaminess for recipients in dictionary groups
@@ -2083,6 +2125,14 @@ class bmsMilter(Milter.Base):
       elif self.internal_connection:
         self.sign_dkim()
 
+      # add authentication results header
+      if self.arresults:
+	h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
+	  results=self.arresults)
+	self.log(h)
+	name,val = str(h).split(': ',1)
+	self.addheader(name,val,0)
+
       # analyze external mail for spam
       spam_checked = self.check_spam()  # tag or quarantine for spam
       if not self.fp:
@@ -2100,7 +2150,7 @@ class bmsMilter(Milter.Base):
       assert not msg.ismodified()
       self.bad_extensions = ['.' + x for x in banned_exts]
       rc = mime.check_attachments(msg,self._chk_attach)
-    except:     # milter crashed trying to analyze mail
+    except:     # milter crashed trying to analyze mail, do some diagnostics
       exc_type,exc_value = sys.exc_info()[0:2]
       if dspam_userdir and exc_type == dspam.error:
         if not exc_value.strerror:
