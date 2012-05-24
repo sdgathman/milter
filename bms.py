@@ -1721,6 +1721,11 @@ class bmsMilter(Milter.Base):
     return Milter.CONTINUE
 
   @Milter.noreply
+  def unknown(self, cmd):
+    self.log('Invalid command sent: %s' % cmd)
+    return Milter.CONTINUE
+
+  @Milter.noreply
   def body(self,chunk):         # copy body to temp file
     try:
       if self.fp:
@@ -2074,17 +2079,12 @@ class bmsMilter(Milter.Base):
     whitelisted = []
     for canon_to in self.recipients:
       user,domain = canon_to.split('@')
-      if internal_domains:
-        for pat in internal_domains:
-          if fnmatchcase(domain,pat): break
-        else:
-          auto_whitelist[canon_to] = None
-          whitelisted.append(canon_to)
-          self.log('Auto-Whitelist:',canon_to)
+      for pat in internal_domains:
+	if fnmatchcase(domain,pat): break
       else:
-        auto_whitelist[canon_to] = None
-        whitelisted.append(canon_to)
-        self.log('Auto-Whitelist:',canon_to)
+	auto_whitelist[canon_to] = None
+	whitelisted.append(canon_to)
+	self.log('Auto-Whitelist:',canon_to)
     return whitelisted
 
   def eom(self):
@@ -2123,7 +2123,7 @@ class bmsMilter(Milter.Base):
       if self.has_dkim:
 	self.check_dkim()
       elif self.internal_connection:
-        self.sign_dkim()
+        self.sign_dkim()	# FIXME: don't sign until accepting
 
       # add authentication results header
       if self.arresults:
@@ -2131,7 +2131,7 @@ class bmsMilter(Milter.Base):
 	  results=self.arresults)
 	self.log(h)
 	name,val = str(h).split(': ',1)
-	self.addheader(name,val,0)
+	self.add_header(name,val,0)
 
       # analyze external mail for spam
       spam_checked = self.check_spam()  # tag or quarantine for spam
@@ -2220,6 +2220,7 @@ class bmsMilter(Milter.Base):
           self.addheader(name,val,idx)
       except Milter.error:
         self.addheader(name,val)        # older sendmail can't insheader
+
 
     # Do not send CBV to internal domains (since we'll just get
     # the "Fraudulent MX" error).  Whitelisted senders clearly do not
