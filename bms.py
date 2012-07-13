@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.184  2012/05/24 18:26:43  customdesigned
+# Log unknown commands.
+#
 # Revision 1.181  2012/04/19 23:20:05  customdesigned
 # Simple DKIM signing support
 #
@@ -798,6 +801,11 @@ class bmsMilter(Milter.Base):
     self.offenses = 0
     # sometimes people put extra space in sendmail config, so we strip
     self.receiver = self.getsymval('j').strip()
+    dport = self.getsymval('{daemon_port}')
+    if dport:
+      self.dport = int(dport)
+    else:
+      self.dport = 0
     if hostaddr and len(hostaddr) > 0:
       ipaddr = hostaddr[0]
       if iniplist(ipaddr,internal_connect):
@@ -815,10 +823,13 @@ class bmsMilter(Milter.Base):
       connecttype += ' TRUSTED'
     if self.missing_ptr:
       connecttype += ' DYN'
-    self.log("connect from %s at %s %s" % (hostname,hostaddr,connecttype))
+    self.log("connect from %s at %s:%s %s" %
+        (hostname,hostaddr,dport,connecttype))
     self.hello_name = None
     self.connecthost = hostname
-    if addr2bin(ipaddr) in banned_ips:
+    # Sendmail is normally configured so that only authenticated senders
+    # are allowed to proceed to MAIL FROM on port 587.
+    if self.dport != 587 and addr2bin(ipaddr) in banned_ips:
       self.log("REJECT: BANNED IP")
       return self.delay_reject('550','5.7.1', 'Banned for dictionary attacks')
     if hostname == 'localhost' and not ipaddr.startswith('127.') \
