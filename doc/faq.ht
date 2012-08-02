@@ -232,40 +232,42 @@ have a local policy feature for more general checking of internal mail.
 
 <li> Q. So how do I use the SPF support?  The sample.py milter doesn't seem
         to use it.
-<p>  A. The bms.py milter supports spf.  The RedHat RPMs will set almost
-everything up for you.  For other systems:
+<p>  A. The milter package contains several more useful milters.  The spfmilter.py milter checks SPF.  The bms.py milter supports spf and too many other
+things.  The RedHat RPMs will set almost everything up for you.  
+For other systems:
 <ol type=i>
-<li> Arrange to run bms.py in the background (as a service perhaps) and
-     redirect output and errors to a logfile.  For instance, on AIX you'll want
-     to use SRC (System Resource Controller).  
-<li> Copy pymilter.cfg to the /etc/mail or the directory you run bms.py in,
-     and edit it.  The comments should explain the options. 
-<li> Start bms.py in the background as arranged.
-<li> Add Xpythonfilter to sendmail.cf or add an INPUT_MAIL_FILTER to
-     sendmail.mc.  Regen sendmail.cf if you use sendmail.mc and restart 
-     sendmail.
+<li> Arrange to run spfmilter.py or bms.py in the background (as a service
+     perhaps) and redirect output and errors to a logfile.  For instance, on
+     AIX you'll want to use SRC (System Resource Controller).  
+<li> Copy spfmilter.cfg or pymilter.cfg to /etc/mail or the directory you run
+     bms.py in, and edit it.  The comments should explain the options. 
+<li> Start spfmilter.py or bms.py in the background as arranged.
+<li> Add Xpythonfilter (or whatever you configured as miltername) to
+     sendmail.cf or add an INPUT_MAIL_FILTER to sendmail.mc.  Regen sendmail.cf
+     if you use sendmail.mc and restart sendmail.
 <li> Arrange to rotate log files and remove old defang files in 
      <code>tempdir</code>.  The RedHat RPM uses <code>logrotate</code> for
      logfiles and a simple cron script using <code>find</code> to clean
      <code>tempdir</code>.
 </ol>
-	In CVS, there is <code>spfmilter.py</code>.  Run that as a service,
-	and it does just SPF.  It uses the sendmail <code>access</code>
+<p>
+	<code>spfmilter.py</code> runs as a service,
+	and does just SPF.  It uses the sendmail <code>access</code>
 	file to configure SPF responses just like <code>bms.py</code>, but
 	supports only REJECT and OK.
-<li> Q. The SPF DSN is sent at least once for domains that don't publish a SPF.
-	How do I stop this behavior?
+<li> Q. bms.py sends the SPF DSN at least once for domains that don't publish a
+        SPF.  How do I stop this behavior?
 <p>  A. The SPF response is controlled by <code>/etc/mail/access</code>
 	(actually the file you specify with <code>access_file</code> in
 	the <code>[spf]</code> section of <code>pymilter.cfg</code>).  
-	Responses are OK, CBV, and REJECT.  CBV sends the DSN.
+	Responses are OK, CBV, DSN, and REJECT.  DSN sends the DSN.
 <p>
 You can change the defaults.  For instance, I have:
 <pre>
 SPF-None:	REJECT
 SPF-Neutral:	CBV
-SPF-Softfail:	CBV
-SPF-Permerror:	CBV
+SPF-Softfail:	DSN
+SPF-Permerror:	DSN
 </pre>
 I have best_guess = 1, so SPF none is converted to PASS/NEUTRAL for policy
 lookup, and 3 strikes (no PTR, no HELO, no SPF) becomes "SPF NONE" for local
@@ -290,7 +292,7 @@ SPF-Softfail:ebay.com	REJECT
 ConfigParser.NoOptionError: No option 'fwdomain' in section: 'srs'
 </pre>
 <p>  A. You need to specify the forward domain - i.e. the domain you want
-	SRS to rewrite stuff too.
+	SRS to rewrite stuff to.
 <p>
 For instance, I have:
 <pre>

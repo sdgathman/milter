@@ -6,6 +6,15 @@ Title: Recent Changes
 
 <h2> Recent Changes for the <code>pymilter</code> project </h2>
 
+<h3> 0.9.7 </h3>
+Raise RuntimeError when result != CONTINUE for @noreply and @nocallback
+decorators.  Remove redundant table in miltermodule (low level change).
+
+<h3> 0.9.6 </h3>
+Raise ValueError on unescaped '%' passed to setreply (setreply arg
+is ultimately passed to printf by libmilter, usually resulting in a
+coredump if it contains % escapes).
+
 <h3> 0.9.5 </h3>
 Print milter.error for invalid callback return type. (Since stacktrace is
 empty, the TypeError exception is confusing.)  Fix milter-template.py.
