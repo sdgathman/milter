@@ -25,7 +25,7 @@ This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
 (see <a href="license.html">LICENSE</a> for copying permissions for this
 documentation)<br>
-Last updated Oct 04, 2011</h4>
+Last updated Aug 08, 2012</h4>
 <table rules="none">
 <tr><td>
 <img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
@@ -66,6 +66,8 @@ for Postfix in Python.
 <h3> What's New </h3>
 
 <ul>
+<li> milter 0.8.16 has dkim signing, and Authentication-Results header.
+pymilter-0.9.7 has several improved diagnostics for milter programming errors.
 <li> milter has dkim checking and logging in CVS.  Will use DKIM Pass 
 for reputation tracking, and as an additional acceptable identity 
 along with HELO, PTR, or SPF.

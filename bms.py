@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.185  2012/07/13 21:05:57  customdesigned
+# Don't check banned ips on submission port (587).
+#
 # Revision 1.184  2012/05/24 18:26:43  customdesigned
 # Log unknown commands.
 #
@@ -985,11 +988,6 @@ class bmsMilter(Milter.Base):
       #   any successful authentication is considered INTERNAL
       # Detailed authorization policy is configured in the access file below.
       self.internal_connection = True
-      self.log(
-        "SMTP AUTH:",self.user, self.getsymval('{auth_type}'),
-        "sslbits =",self.getsymval('{cipher_bits}'),
-        "ssf =",self.getsymval('{auth_ssf}'), "INTERNAL"
-      )
       auth_type = self.getsymval('{auth_type}')
       ssl_bits =  self.getsymval('{cipher_bits}')
       self.log(
@@ -999,7 +997,7 @@ class bmsMilter(Milter.Base):
       # Detailed authorization policy is configured in the access file below.
       if authres: self.arresults.append(
 	authres.SMTPAUTHAuthenticationResult(result = 'pass',
-	  result_comment = auth_type+' sslbits='+ssl_bits,
+	  result_comment = auth_type+' sslbits=%s'%ssl_bits,
 	  smtp_auth = self.user
 	)
       )
@@ -1818,7 +1816,7 @@ class bmsMilter(Milter.Base):
         d = dkim.DKIM(txt,logger=milter_log)
 	h = d.sign('default',domain,dkim_key,canonicalize=('relaxed','simple'))
 	name,val = h.split(':',1)
-        self.addheader(name,val.strip(),0)
+        self.addheader(name,val.strip().replace('\r\n','\n'),0)
       except dkim.DKIMException as x:
 	self.log('DKIM: %s'%x)
       except Exception as x:
@@ -2140,7 +2138,6 @@ class bmsMilter(Milter.Base):
       if self.arresults:
 	h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
 	  results=self.arresults)
-	self.log(h)
 	name,val = str(h).split(': ',1)
 	self.add_header(name,val,0)
 

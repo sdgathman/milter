@@ -219,7 +219,7 @@ class dkimMilter(Milter.Base):
 	h = d.sign(conf.selector,conf.domain,conf.key,
                 canonicalize=('relaxed','simple'))
 	name,val = h.split(': ',1)
-        self.addheader(name,val.strip(),0)
+        self.addheader(name,val.strip().replace('\r\n','\n'),0)
       except dkim.DKIMException as x:
 	self.log('DKIM: %s'%x)
       except Exception as x:
