@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.186  2012/08/28 21:10:39  customdesigned
+# Fix double logging and SMTP AUTH with no SSL/TLS
+#
 # Revision 1.185  2012/07/13 21:05:57  customdesigned
 # Don't check banned ips on submission port (587).
 #
@@ -639,7 +642,7 @@ def param2dict(str):
   return dict([(k.upper(),v) for k,v in pairs])
 
 class SPFPolicy(object):
-  "Get SPF policy by result from sendmail style access file."
+  "Get SPF/DKIM policy by result from sendmail style access file."
   def __init__(self,sender):
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
@@ -935,6 +938,8 @@ class bmsMilter(Milter.Base):
     self.trust_received = self.trusted_relay
     self.trust_spf = self.trusted_relay or self.internal_connection
     self.external_spf = None
+    self.trust_dkim = self.trust_spf
+    self.external_dkim = None
     self.redirect_list = []
     self.discard_list = []
     self.new_headers = []
@@ -1594,22 +1599,26 @@ class bmsMilter(Milter.Base):
   def bandomain(self,wild=0):
     if self.spf and self.spf_guess == 'pass' and self.confidence == 0:
       domain = self.spf.o
-      if not isbanned(domain,banned_domains):
-	m = RE_MULTIMX.match(domain)
-	if m:
-	  orig = domain
-	  domain = '*.' + domain[m.end():]
-	  self.log('BAN DOMAIN:',orig,'->',domain)
-	else:
-	  if wild:
-	    a = domain.split('.')[wild:]
-	    if len(a) > 1: domain = '*.'+'.'.join(a)
-	  self.log('BAN DOMAIN:',domain)
-	try:
-	  fp = open('banned_domains','at')
-	  print >>fp,domain 
-	finally: fp.close()
-	banned_domains.add(domain)
+    elif self.spf and self.spf.o == self.dkim_domain:
+      domain = self.dkim_domain
+    else:
+      return Milter.REJECT
+    if not isbanned(domain,banned_domains):
+      m = RE_MULTIMX.match(domain)
+      if m:
+        orig = domain
+        domain = '*.' + domain[m.end():]
+        self.log('BAN DOMAIN:',orig,'->',domain)
+      else:
+        if wild:
+          a = domain.split('.')[wild:]
+          if len(a) > 1: domain = '*.'+'.'.join(a)
+        self.log('BAN DOMAIN:',domain)
+      try:
+        fp = open('banned_domains','at')
+        print >>fp,domain 
+      finally: fp.close()
+      banned_domains.add(domain)
     return Milter.REJECT
 
   def data(self):
@@ -1654,6 +1663,10 @@ class bmsMilter(Milter.Base):
       self.log('%s: %s' % (name,val.splitlines()[0]))
     elif dkim and lname == 'dkim-signature':
       self.has_dkim = True
+      self.log('%s: %s' % (name,val.splitlines()[0]))
+    elif self.trust_dkim and lname == 'authentication-results':
+      self.trust_dkim = False
+      self.external_dkim = val
       self.log('%s: %s' % (name,val.splitlines()[0]))
     # FIXME: keep both decoded and pristine headers.  DKIM needs
     # pristine headers.
@@ -1832,7 +1845,6 @@ class bmsMilter(Milter.Base):
 	res = d.verify()
 	if res:
 	  dkim_comment = 'Good signature.'
-          self.dkim_domain = d.domain
 	  result = 'pass'
 	else:
 	  dkim_comment = 'Bad signature.'
@@ -1842,6 +1854,7 @@ class bmsMilter(Milter.Base):
       except Exception as x:
 	dkim_comment = str(x)
 	milter_log.error("check_dkim: %s",x,exc_info=True)
+      self.dkim_domain = d.domain
       if authres: self.arresults.append(
         authres.DKIMAuthenticationResult(result=result,
 	  result_comment = dkim_comment,
@@ -1849,10 +1862,11 @@ class bmsMilter(Milter.Base):
 	  header_d=d.signature_fields.get(b'd')
 	)
       )
-      fd,fname = tempfile.mkstemp(".dkim")
-      with os.fdopen(fd,"w+b") as fp:
-	fp.write(txt)
-      self.log('DKIM: Fail (saved as %s)'%fname)
+      if not res:
+	fd,fname = tempfile.mkstemp(".dkim")
+	with os.fdopen(fd,"w+b") as fp:
+	  fp.write(txt)
+	self.log('DKIM: Fail (saved as %s)'%fname)
       return res
 
   # check spaminess for recipients in dictionary groups
@@ -1888,9 +1902,18 @@ class bmsMilter(Milter.Base):
 		self.spf = q
               else:
                 self.spf = None
+	      if self.external_dkim:
+	        ar = authres.AuthenticationResultsHeader.parse_value(
+			self.external_dkim)
+		for r in ar.results:
+		  if r.method == 'dkim' and r.result == 'pass':
+		    for p in r.properties:
+		      if p.type == 'header' and p.name == 'd':
+		        self.dkim_domain = p.value
             if user == 'bandom' and self.internal_connection:
 	      if self.spf:
-                if self.spf_guess == 'pass' or q.result == 'none':
+                if self.spf_guess == 'pass' or q.result == 'none' \
+			or self.spf.o == self.dkim_domain:
 		  self.confidence = 0	# ban regardless of reputation status
 		  s = rcpt.split('@')[0][-1]
                   self.bandomain(wild=s.isdigit() and int(s))
@@ -2129,8 +2152,16 @@ class bmsMilter(Milter.Base):
           self.log('BLACKLIST:',sender,fname)
           return Milter.DISCARD
       
-      if self.has_dkim:
-	self.check_dkim()
+      if not self.internal_connection and self.has_dkim:
+	res = self.check_dkim()
+        if self.dkim_domain:
+	  p = SPFPolicy(self.dkim_domain)
+          policy = p.getPolicy('dkim-%s:'%res)
+          p.close()
+	  if policy == 'REJECT':
+	    self.log('REJECT: DKIM',res,self.dkim_domain)
+	    self.setreply('550','5.7.1','DKIM %s for %s'%(res,self.dkim_domain))
+	    return Milter.REJECT
       elif self.internal_connection:
         self.sign_dkim()	# FIXME: don't sign until accepting
 
