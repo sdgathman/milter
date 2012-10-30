@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.187  2012/10/12 04:09:45  customdesigned
+# Implement DKIM policy in access file.  Parse Authentication-Results header
+# to get dkim result for feedback mail.  Let DKIM confirm domain for missing
+# or neutral SPF result.
+#
 # Revision 1.186  2012/08/28 21:10:39  customdesigned
 # Fix double logging and SMTP AUTH with no SSL/TLS
 #
@@ -1840,14 +1845,14 @@ class bmsMilter(Milter.Base):
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
       res = False
       result = 'fail'
-      d = dkim.DKIM(txt,logger=milter_log)
+      d = dkim.DKIM(txt,logger=milter_log,minkey=768)
       try:
 	res = d.verify()
 	if res:
-	  dkim_comment = 'Good signature.'
+	  dkim_comment = 'Good %d bit signature.' % d.keysize
 	  result = 'pass'
 	else:
-	  dkim_comment = 'Bad signature.'
+	  dkim_comment = 'Bad %d bit signature.' % d.keysize
       except dkim.DKIMException as x:
 	dkim_comment = str(x)
 	#self.log('DKIM: %s'%x)
