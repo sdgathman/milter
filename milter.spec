@@ -12,7 +12,7 @@
 Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Version: 0.8.16
+Version: 0.8.17
 Release: 1%{dist}.py26
 Source: milter-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
@@ -197,9 +197,13 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
-* Sun Apr 22 2012 Stuart Gathman <stuart@bmsi.com> 0.8.16-2
+* Sun Apr 22 2012 Stuart Gathman <stuart@bmsi.com> 0.8.17-1
+- report keysize of DKIM signatures.
 - simple DKIM milter as another sample
 - basic DKIM signing support
+- Implement DKIM policy in access file.  
+- Parse Authentication-Results header to get dkim result for feedback mail.  
+- Let DKIM confirm domain for missing or neutral SPF result.
 
 * Mon Oct 03 2011 Stuart Gathman <stuart@bmsi.com> 0.8.16-1
 - experimental DKIM support

@@ -232,9 +232,9 @@ class dkimMilter(Milter.Base):
       try:
 	res = d.verify()
 	if res:
-	  self.dkim_comment = 'Good signature.'
+	  self.dkim_comment = 'Good %d bit signature.' % d.keysize
 	else:
-	  self.dkim_comment = 'Bad signature.'
+	  self.dkim_comment = 'Bad %d bit signature.' % d.keysize
       except dkim.DKIMException as x:
 	self.dkim_comment = str(x)
 	#self.log('DKIM: %s'%x)
