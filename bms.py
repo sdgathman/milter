@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.188  2012/10/30 18:21:20  customdesigned
+# Include dkim key size in Authentication-Results header.  Require 768 bits
+#
 # Revision 1.187  2012/10/12 04:09:45  customdesigned
 # Implement DKIM policy in access file.  Parse Authentication-Results header
 # to get dkim result for feedback mail.  Let DKIM confirm domain for missing
@@ -1607,6 +1610,13 @@ class bmsMilter(Milter.Base):
     elif self.spf and self.spf.o == self.dkim_domain:
       domain = self.dkim_domain
     else:
+      return Milter.REJECT
+    if domain in ('yahoo.com','gmail.com','aol.com','hotmail.com'):
+      sender = self.spf.s
+      blacklist[sender] = None
+      self.greylist = False   # don't delay - use spam for training
+      self.blacklist = True
+      self.log("BLACKLIST",sender)
       return Milter.REJECT
     if not isbanned(domain,banned_domains):
       m = RE_MULTIMX.match(domain)
