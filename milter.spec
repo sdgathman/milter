@@ -90,6 +90,12 @@ cat >$RPM_BUILD_ROOT/etc/logrotate.d/milter <<'EOF'
   copytruncate
 }
 EOF
+cat >$RPM_BUILD_ROOT/etc/logrotate.d/dkim-milter <<'EOF'
+%{logdir}/dkim-milter.log {
+  copytruncate
+  compress
+}
+EOF
 
 # purge saved defanged message copies
 mkdir -p $RPM_BUILD_ROOT/etc/cron.daily
@@ -192,11 +198,15 @@ fi
 %{libdir}/dkim-milter.py*
 %config(noreplace) /etc/mail/dkim-milter.cfg
 /etc/rc.d/init.d/dkim-milter
+/etc/logrotate.d/dkim-milter
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Mon Jan 07 2013 Stuart Gathman <stuart@bmsi.com> 0.8.17-2
+- include logrotate for dkim-milter
+
 * Sun Apr 22 2012 Stuart Gathman <stuart@bmsi.com> 0.8.17-1
 - report keysize of DKIM signatures.
 - simple DKIM milter as another sample
