@@ -1,17 +1,6 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
-# Revision 1.188  2012/10/30 18:21:20  customdesigned
-# Include dkim key size in Authentication-Results header.  Require 768 bits
-#
-# Revision 1.187  2012/10/12 04:09:45  customdesigned
-# Implement DKIM policy in access file.  Parse Authentication-Results header
-# to get dkim result for feedback mail.  Let DKIM confirm domain for missing
-# or neutral SPF result.
-#
-# Revision 1.186  2012/08/28 21:10:39  customdesigned
-# Fix double logging and SMTP AUTH with no SSL/TLS
-#
 # Revision 1.185  2012/07/13 21:05:57  customdesigned
 # Don't check banned ips on submission port (587).
 #
@@ -414,6 +403,10 @@ errors_url = "http://bmsi.com/cgi-bin/errors.cgi"
 dkim_key = None
 dkim_selector = None
 dkim_domain = None
+email_providers = (
+  'yahoo.com','gmail.com','aol.com','hotmail.com','me.com','googlegroups.com',
+  'att.net'
+)
 
 logging.basicConfig(
         stream=sys.stdout,
@@ -485,6 +478,10 @@ def read_config(list):
   porn_words = [x for x in cp.getlist(section,'porn_words') if len(x) > 1]
   spam_words = [x for x in cp.getlist(section,'spam_words') if len(x) > 1]
   from_words = [x for x in cp.getlist(section,'from_words') if len(x) > 1]
+  if len(from_words) == 1 and from_words[0].startswith("file:"):
+    with open(from_words[0][5:],'r') as fp:
+      from_words = [s.strip() for s in fp.readlines()]
+    from_words = [s for s in from_words if len(s) > 2]
 
   # scrub section
   global hide_path, reject_virus_from, internal_policy
@@ -1551,12 +1548,12 @@ class bmsMilter(Milter.Base):
       fname,email = parseaddr(val)
       for w in spam_words:
       	if fname.find(w) >= 0:
-          self.log('REJECT: %s: %s' % (name,val))
+          self.log('REJECT: %s: %s "%s"' % (name,val,w))
           self.setreply('550','5.7.1','No soliciting')
           return self.bandomain()
       for w in from_words:
       	if fname.find(w) >= 0:
-          self.log('REJECT: %s: %s' % (name,val))
+          self.log('REJECT: %s: %s "%s"' % (name,val,w))
           self.setreply('550','5.7.1','No soliciting')
           return self.bandomain()
       # check for porn keywords
@@ -1611,7 +1608,7 @@ class bmsMilter(Milter.Base):
       domain = self.dkim_domain
     else:
       return Milter.REJECT
-    if domain in ('yahoo.com','gmail.com','aol.com','hotmail.com'):
+    if domain in email_providers:
       sender = self.spf.s
       blacklist[sender] = None
       self.greylist = False   # don't delay - use spam for training
@@ -1621,17 +1618,17 @@ class bmsMilter(Milter.Base):
     if not isbanned(domain,banned_domains):
       m = RE_MULTIMX.match(domain)
       if m:
-        orig = domain
-        domain = '*.' + domain[m.end():]
-        self.log('BAN DOMAIN:',orig,'->',domain)
+	orig = domain
+	domain = '*.' + domain[m.end():]
+	self.log('BAN DOMAIN:',orig,'->',domain)
       else:
-        if wild:
-          a = domain.split('.')[wild:]
-          if len(a) > 1: domain = '*.'+'.'.join(a)
-        self.log('BAN DOMAIN:',domain)
+	if wild:
+	  a = domain.split('.')[wild:]
+	  if len(a) > 1: domain = '*.'+'.'.join(a)
+	self.log('BAN DOMAIN:',domain)
       try:
-        fp = open('banned_domains','at')
-        print >>fp,domain 
+	fp = open('banned_domains','at')
+	print >>fp,domain 
       finally: fp.close()
       banned_domains.add(domain)
     return Milter.REJECT
