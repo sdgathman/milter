@@ -50,6 +50,10 @@ class SPFPolicy(object):
     else: acf = None
     self.acf = acf
 
+  def close(self):
+    if self.acf:
+      self.acf.close()
+
   def getPolicy(self,pfx):
     acf = self.acf
     if not acf: return None
@@ -149,7 +153,7 @@ class spfMilter(Milter.Base):
       )
       # Restrict SMTP AUTH users to authorized domains
       if self.internal_connection:
-        p = SPFPolicy('%s@%s'%(self.user,domain))
+        p = SPFPolicy('%s@%s'%(self.user,t[1]))
         policy = p.getPolicy('smtp-auth:')
         p.close()
         if policy:
