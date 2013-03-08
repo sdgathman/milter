@@ -1,0 +1,6 @@
+SPF-Pass:example.com	OK
+SPF-Neutral:example.com	REJECT
+SPF-Permerror:foo@bad.example.com	OK
+SPF-Permerror:          REJECT
+SMTP-Auth:good@example.com      OK
+SMTP-Auth:example.com      REJECT

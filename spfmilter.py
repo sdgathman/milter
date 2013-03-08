@@ -19,7 +19,11 @@ syslog.openlog('spfmilter',0,syslog.LOG_MAIL)
 
 class Config(object):
   "Hold configuration options."
-  pass
+  def __init__(self):
+    self.internal_connect = ()
+    self.trusted_relay = ()
+    self.trusted_forwarder = ()
+    self.access_file = None
 
 def read_config(list):
   "Return new config object."
@@ -153,7 +157,9 @@ class spfMilter(Milter.Base):
       )
       # Restrict SMTP AUTH users to authorized domains
       if self.internal_connection:
-        p = SPFPolicy('%s@%s'%(self.user,t[1]))
+        #p = SPFPolicy('%s@%s'%(self.user,t[1]))
+        authsend = '@'.join((self.user,t[1]))
+        p = SPFPolicy(authsend,access_file=self.conf.access_file)
         policy = p.getPolicy('smtp-auth:')
         p.close()
         if policy:
@@ -167,8 +173,7 @@ class spfMilter(Milter.Base):
             return Milter.REJECT
 
     if not (self.internal_connection or self.trusted_relay) and self.connectip:
-      rc = self.check_spf()
-      if rc != Milter.CONTINUE: return rc
+      return self.check_spf()
     return Milter.CONTINUE
 
   def eom(self):
