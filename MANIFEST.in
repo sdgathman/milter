@@ -4,8 +4,10 @@ include CREDITS
 include ChangeLog
 include MANIFEST.in
 include testbms.py
+include testspf.py
 include test.py
 include spfmilter.py
+include dkim-milter.py
 include bms.py
 include ban2zone.py
 include setup.py

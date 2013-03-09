@@ -1,3 +1,4 @@
+#!/usr/bin/python2.6
 import unittest
 import Milter
 import spfmilter
@@ -182,14 +183,16 @@ def suite():
   return s
 
 if __name__ == '__main__':
-  if len(sys.argv) > 1:
-    for fname in sys.argv[1:]:
-      milter = TestMilter()
-      milter.connect('main')
-      fp = open(fname,'r')
-      rc = milter.feedFile(fp)
-      fp = milter._body
-      sys.stdout.write(fp.getvalue())
+  #unittest.main()
+  import os
+  cmd = None
+  if os.access('test/access',os.R_OK):
+    if not os.path.exists('test/access.db') or \
+        os.path.getmtime('test/access') > os.path.getmtime('test/access.db'):
+      cmd = 'makemap hash test/access.db <test/access'
+      print cmd
+      os.system(cmd)
   else:
-    #unittest.main()
-    unittest.TextTestRunner().run(suite())
+    print "Missing test/access"
+    os.exit(1)
+  unittest.TextTestRunner().run(suite())
