@@ -166,13 +166,14 @@ class spfMilter(Milter.Base):
       p.close()
       if policy:
         if policy != 'OK':
-          self.log("REJECT: unauthorized user",self.user,
-              "at",self.connectip,"sending from domain",domain)
+          self.log("REJECT: SMTP user",self.user,
+              "at",self.connectip,"not authorized for domain",domain)
           self.setreply('550','5.7.1',
             'SMTP user %s is not authorized to send from domain %s.' %
             (self.user,domain)
           )
           return Milter.REJECT
+      self.log("SMTP authorized user",self.user,"sending from domain",domain)
 
     if not (self.internal_connection or self.trusted_relay) and self.connectip:
       return self.check_spf()
