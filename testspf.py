@@ -61,6 +61,12 @@ zonedata = {
   'bad.example.com': [
     ('TXT', ('v=spf1 a:192.0.2.1',))
   ],
+  'fail.example.com': [
+    ('TXT', ('v=spf1 ip4:192.0.2.2 -all',))
+  ],
+  'mail.example.com': [
+    ('TXT', ('v=spf1 ip4:192.0.2.1 -all',))
+  ]
 }
 
 class SPFMilterTestCase(unittest.TestCase):
@@ -93,6 +99,36 @@ class SPFMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.CONTINUE)
     rc = milter.feedMsg('test1',sender='good@example.com')
     self.assertEqual(rc,Milter.REJECT)
+    rc = milter.connect('mail.example.com',ip='192.0.2.3')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='whatever@random.com')
+    self.assertEqual(rc,Milter.CONTINUE)
+    milter.close()
+
+  def testHelo(self):
+    milter = TestMilter()
+    # Reject numeric HELO
+    rc = milter.connect(helo='1.2.3.4',ip='192.0.3.1')
+    self.assertEqual(rc,Milter.REJECT)
+    milter.close()
+
+  def testFail(self):
+    milter = TestMilter()
+    # Reject HELO SPF Fail when domain has no policy
+    rc = milter.connect(helo='fail.example.com',ip='192.0.3.1')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='good@random.com')
+    self.assertEqual(rc,Milter.REJECT)
+    # HELO SPF Fail overridden by MAIL FROM Pass
+    rc = milter.connect(helo='fail.example.com',ip='192.0.2.1')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='good@example.com')
+    self.assertEqual(rc,Milter.CONTINUE)
+    # HELO SPF Pass overridden by MAIL FROM Fail
+    rc = milter.connect(helo='mail.example.com',ip='192.0.2.2')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='good@fail.example.com')
+    self.assertEqual(rc,Milter.CONTINUE)
     milter.close()
 
   def testPermerror(self):
@@ -118,13 +154,16 @@ class SPFMilterTestCase(unittest.TestCase):
 
   def testAuth(self):
     milter = TestMilter()
+    # Try a SMTP authorized user from an unauthorized IP, that is 
+    # authorized to use example.com
     milter.setsymval('{auth_authen}','good')
     milter.setsymval('{cipher_bits}','256')
     milter.setsymval('{auth_ssf}','0')
-    rc = milter.connect('mail.example.com',ip='192.0.2.1')
+    rc = milter.connect('mail.example.com',ip='192.0.3.1')
     self.assertEqual(rc,Milter.CONTINUE)
-    rc = milter.feedMsg('test1',sender='good@example.com')
+    rc = milter.feedMsg('test1',sender='grief@example.com')
     self.assertEqual(rc,Milter.CONTINUE)
+    # Try a user *not* authorized to use example.com
     milter.setsymval('{auth_authen}','bad')
     rc = milter.connect('mail.example.com',ip='192.0.2.1')
     self.assertEqual(rc,Milter.CONTINUE)
