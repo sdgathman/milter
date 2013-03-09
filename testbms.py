@@ -31,7 +31,7 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.CONTINUE)
     rc = milter.feedMsg(fname)
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter.bodyreplaced,"Message body not replaced")
+    self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     open('test/'+fname+".tstout","w").write(fp.getvalue())
     #self.failUnless(fp.getvalue() == open("test/virus1.out","r").read())
@@ -47,19 +47,19 @@ class BMSMilterTestCase(unittest.TestCase):
     milter.connect('testParse')
     rc = milter.feedMsg(fname)
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter.bodyreplaced,"Milter needlessly replaced body.")
+    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
     fp = milter._body
     open('test/'+fname+".tstout","w").write(fp.getvalue())
     milter.connect('pro-send.com')
     rc = milter.feedMsg('spam8')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter.bodyreplaced,"Milter needlessly replaced body.")
+    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
     rc = milter.feedMsg('bounce')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter.bodyreplaced,"Milter needlessly replaced body.")
+    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
     rc = milter.feedMsg('bounce1')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter.bodyreplaced,"Milter needlessly replaced body.")
+    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
     milter.close()
 
   def testDefang2(self):
@@ -67,17 +67,17 @@ class BMSMilterTestCase(unittest.TestCase):
     milter.connect('testDefang2')
     rc = milter.feedMsg('samp1')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter.bodyreplaced,"Milter needlessly replaced body.")
+    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
     rc = milter.feedMsg("virus3")
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter.bodyreplaced,"Message body not replaced")
+    self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     open("test/virus3.tstout","w").write(fp.getvalue())
     #self.failUnless(fp.getvalue() == open("test/virus3.out","r").read())
     rc = milter.feedMsg("virus6")
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter.bodyreplaced,"Message body not replaced")
-    self.failUnless(milter.headerschanged,"Message headers not adjusted")
+    self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    self.failUnless(milter._headerschanged,"Message headers not adjusted")
     fp = milter._body
     open("test/virus6.tstout","w").write(fp.getvalue())
     milter.close()
@@ -88,20 +88,20 @@ class BMSMilterTestCase(unittest.TestCase):
     # test script removal on complex HTML attachment
     rc = milter.feedMsg('amazon')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter.bodyreplaced,"Message body not replaced")
+    self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     open("test/amazon.tstout","w").write(fp.getvalue())
     # test defanging Klez virus
     rc = milter.feedMsg("virus13")
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter.bodyreplaced,"Message body not replaced")
+    self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     open("test/virus13.tstout","w").write(fp.getvalue())
     # test script removal on quoted-printable HTML attachment
     # sgmllib can't handle the <![if cond]> syntax
     rc = milter.feedMsg('spam44')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter.bodyreplaced,"Message body replaced")
+    self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     open("test/spam44.tstout","w").write(fp.getvalue())
     milter.close()
@@ -115,14 +115,14 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.ACCEPT)
     # python2.4 doesn't scan encoded message attachments
     if sys.hexversion < 0x02040000:
-      self.failUnless(milter.bodyreplaced,"Message body not replaced")
-    #self.failIf(milter.bodyreplaced,"Message body replaced")
+      self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    #self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     open("test/test8.tstout","w").write(fp.getvalue())
     rc = milter.feedMsg('virus7')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter.bodyreplaced,"Message body not replaced")
-    #self.failIf(milter.bodyreplaced,"Message body replaced")
+    self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    #self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     open("test/virus7.tstout","w").write(fp.getvalue())
 
@@ -139,7 +139,7 @@ class BMSMilterTestCase(unittest.TestCase):
     # python2.4 email does not decode message attachments, so script
     # is not replaced
     if sys.hexversion < 0x02040000:
-      self.failUnless(milter.bodyreplaced,"Message body not replaced")
+      self.failUnless(milter._bodyreplaced,"Message body not replaced")
 
   def testBadBoundary(self):
     milter = TestMilter()
@@ -151,9 +151,9 @@ class BMSMilterTestCase(unittest.TestCase):
       # python2.4 adds invalid boundaries to decects list and makes
       # payload a str
       self.assertEqual(rc,Milter.REJECT)
-      self.assertEqual(milter.reply[0],'554')
-    #self.failUnless(milter.bodyreplaced,"Message body not replaced")
-    self.failIf(milter.bodyreplaced,"Message body replaced")
+      self.assertEqual(milter._reply[0],'554')
+    #self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     open("test/bound.tstout","w").write(fp.getvalue())
 
@@ -164,8 +164,8 @@ class BMSMilterTestCase(unittest.TestCase):
     #pdb.set_trace()
     rc = milter.feedMsg('test1')
     self.assertEqual(rc,Milter.ACCEPT)
-    #self.failUnless(milter.bodyreplaced,"Message body not replaced")
-    self.failIf(milter.bodyreplaced,"Message body replaced")
+    #self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     open("test/test1.tstout","w").write(fp.getvalue())
 
