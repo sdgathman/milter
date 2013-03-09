@@ -36,6 +36,8 @@ def read_config(list):
   conf.miltername = cp.getdefault('milter','name','pyspffilter')
   conf.trusted_relay = cp.getlist('milter','trusted_relay')
   conf.internal_connect = cp.getlist('milter','internal_connect')
+  conf.untrapped_exception = cp.getdefault('milter','untrapped_exception',
+        'CONTINUE')
   if cp.has_option('spf','trusted_forwarder'):
     conf.trusted_forwarder = cp.getlist('spf','trusted_forwarder')
   else: # backward compatibility with config typo
@@ -283,20 +285,29 @@ class spfMilter(Milter.Base):
     return Milter.CONTINUE
 
 if __name__ == "__main__":
-  Milter.set_exception_policy(Milter.CONTINUE)
   Milter.factory = spfMilter
   Milter.set_flags(Milter.CHGHDRS + Milter.ADDHDRS)
   global config
   config = read_config(['spfmilter.cfg','/etc/mail/spfmilter.cfg'])
+  ue = config.untrapped_exception.upper()
+  if ue == 'CONTINUE':
+    Milter.set_exception_policy(Milter.CONTINUE)
+  elif ue == 'REJECT':
+    Milter.set_exception_policy(Milter.REJECT)
+  elif ue == 'TEMPFAIL':
+    Milter.set_exception_policy(Milter.TEMPFAIL)
+  else:
+    print("WARNING: invalid untrapped_exception policy: %s"%ue)
+
   miltername = config.miltername
   socketname = config.socketname
-  print """To use this with sendmail, add the following to sendmail.cf:
+  print("""To use this with sendmail, add the following to sendmail.cf:
 
 O InputMailFilters=%s
 X%s,        S=local:%s
 
 See the sendmail README for libmilter.
-sample spfmilter startup""" % (miltername,miltername,socketname)
+spfmilter startup""" % (miltername,miltername,socketname))
   sys.stdout.flush()
   Milter.runmilter(miltername,socketname,240)
-  print "sample spfmilter shutdown"
+  print "spfmilter shutdown"
