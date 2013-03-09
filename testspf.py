@@ -130,6 +130,12 @@ class SPFMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.CONTINUE)
     rc = milter.feedMsg('test1',sender='good@example.com')
     self.assertEqual(rc,Milter.REJECT)
+    # Try to break it by using an implicit domain
+    milter.setsymval('{auth_authen}','bad')
+    rc = milter.connect('mail.example.com',ip='192.0.2.1')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='good')
+    self.assertEqual(rc,Milter.REJECT)
     milter.close()
 
 def suite(): 

@@ -132,7 +132,11 @@ class spfMilter(Milter.Base):
       return Milter.REJECT
     self.mailfrom = f
     t = parse_addr(f)
-    if len(t) == 2: t[1] = t[1].lower()
+    if len(t) == 2:
+      t[1] = t[1].lower()
+      domain = t[1]
+    else:
+      domain = 'localhost.localdomain'
     self.canon_from = '@'.join(t)
 
     # Check SMTP AUTH, also available:
@@ -156,21 +160,19 @@ class spfMilter(Milter.Base):
         "ssf =",self.getsymval('{auth_ssf}'), "INTERNAL"
       )
       # Restrict SMTP AUTH users to authorized domains
-      if self.internal_connection:
-        #p = SPFPolicy('%s@%s'%(self.user,t[1]))
-        authsend = '@'.join((self.user,t[1]))
-        p = SPFPolicy(authsend,access_file=self.conf.access_file)
-        policy = p.getPolicy('smtp-auth:')
-        p.close()
-        if policy:
-          if policy != 'OK':
-            self.log("REJECT: unauthorized user",self.user,
-                "at",self.connectip,"sending MAIL FROM",self.canon_from)
-            self.setreply('550','5.7.1',
-              'SMTP user %s is not authorized to use MAIL FROM %s.' %
-              (self.user,self.canon_from)
-            )
-            return Milter.REJECT
+      authsend = '@'.join((self.user,domain))
+      p = SPFPolicy(authsend,access_file=self.conf.access_file)
+      policy = p.getPolicy('smtp-auth:')
+      p.close()
+      if policy:
+        if policy != 'OK':
+          self.log("REJECT: unauthorized user",self.user,
+              "at",self.connectip,"sending from domain",domain)
+          self.setreply('550','5.7.1',
+            'SMTP user %s is not authorized to send from domain %s.' %
+            (self.user,domain)
+          )
+          return Milter.REJECT
 
     if not (self.internal_connection or self.trusted_relay) and self.connectip:
       return self.check_spf()
@@ -273,6 +275,7 @@ class spfMilter(Milter.Base):
     return Milter.CONTINUE
 
 if __name__ == "__main__":
+  Milter.set_exception_policy(Milter.CONTINUE)
   Milter.factory = spfMilter
   Milter.set_flags(Milter.CHGHDRS + Milter.ADDHDRS)
   global config

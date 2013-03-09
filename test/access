@@ -4,3 +4,4 @@ SPF-Permerror:foo@bad.example.com	OK
 SPF-Permerror:          REJECT
 SMTP-Auth:good@example.com      OK
 SMTP-Auth:example.com      REJECT
+SMTP-Auth:bad@localhost.localdomain     REJECT
