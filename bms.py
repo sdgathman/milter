@@ -267,7 +267,7 @@ from Milter.dynip import is_dynip as dynip
 from Milter.utils import \
         iniplist,parse_addr,parse_header,ip4re,addr2bin,parseaddr
 from Milter.config import MilterConfigParser
-from Milter.greylist import Greylist
+from Milter.greysql import Greylist
 
 from fnmatch import fnmatchcase
 from email.Utils import getaddresses
@@ -337,6 +337,49 @@ import logging
 
 # Thanks to Chris Liechti for config parsing suggestions
 
+class Config(object):
+  def __init__(self):
+    ## True if greylisting is activated
+    self.greylist = False
+    ## List email providers which should have mailboxes banned, not domain.
+    self.email_providers = (
+      'yahoo.com','gmail.com','aol.com','hotmail.com','me.com',
+      'googlegroups.com', 'att.net', 'nokiamail.com'
+    )
+    self.access_file = None
+    ## URL of CGI to display enhanced error diagnostics via web.
+    self.errors_url = "http://bmsi.com/cgi-bin/errors.cgi"
+    self.dkim_domain = None
+    self.dkim_key = None
+    self.dkim_selector = 'default'
+    ## Banned case sensitive Subject keywords 
+    self.spam_words = ()
+    ## Banned case insensitive Subject keywords 
+    self.porn_words = ()
+    ## Banned keywords in From: header
+    self.from_words = ()
+    ## Internal senders which should whitelist recipients
+    self.whitelist_senders = {}
+    ## Send whitelisted recipients to this MX for consolidation
+    self.whitelist_mx = ()
+    ## Ban these HELO names (usually local domains)
+    self.hello_blacklist = ()
+    ## Treat these MAIL FROM mailboxes as DSNs - for braindead MTAs.
+    self.banned_users = ()
+    ## Log header fields
+    self.log_headers = False
+
+  def getGreylist(self):
+    if not self.greylist: return None
+    greylist = getattr(local,'greylist',None)
+    if not greylist:
+      greylist = Greylist(self.grey_db,self.grey_time,
+	self.grey_expire,self.grey_days)
+      local.greylist = greylist
+    return greylist
+
+config = Config()
+
 # Global configuration defaults suitable for test framework.
 socketname = "/tmp/pythonsock"
 reject_virus_from = ()
@@ -350,12 +393,8 @@ blind_wiretap = True
 check_user = {}
 block_forward = {}
 hide_path = ()
-log_headers = False
 block_chinese = False
 case_sensitive_localpart = False
-spam_words = ()
-porn_words = ()
-from_words = ()
 banned_exts = mime.extlist.split(',')
 scan_zip = False
 scan_html = True
@@ -367,8 +406,6 @@ private_relay = ()
 internal_mta = ()
 trusted_forwarder = ()
 internal_domains = ()
-banned_users = ()
-hello_blacklist = ()
 smart_alias = {}
 dspam_dict = None
 dspam_users = {}
@@ -376,8 +413,6 @@ dspam_train = {}
 dspam_userdir = None
 dspam_exempt = {}
 dspam_whitelist = {}
-whitelist_senders = {}
-whitelist_mx = ()
 dspam_screener = ()
 dspam_internal = True   # True if internal mail should be dspammed
 dspam_reject = ()
@@ -392,21 +427,11 @@ spf_accept_fail = ()
 spf_best_guess = False
 spf_reject_noptr = False
 supply_sender = False
-access_file = None
 timeout = 600
 banned_ips = set()
 banned_domains = set()
-greylist = None
 UNLIMITED = 0x7fffffff
 max_demerits = UNLIMITED
-errors_url = "http://bmsi.com/cgi-bin/errors.cgi"
-dkim_key = None
-dkim_selector = None
-dkim_domain = None
-email_providers = (
-  'yahoo.com','gmail.com','aol.com','hotmail.com','me.com','googlegroups.com',
-  'att.net'
-)
 
 logging.basicConfig(
         stream=sys.stdout,
@@ -416,6 +441,14 @@ logging.basicConfig(
 )
 milter_log = logging.getLogger('milter')
 
+import threading
+
+local = threading.local()
+
+## Read config files.
+# Only some configs are returned in a Config object.  Most are still
+# globals set as a side effect.  The intent is to migrate them over time.
+# @return Config
 def read_config(list):
   cp = MilterConfigParser({
     'tempdir': "/var/log/milter/save",
@@ -437,32 +470,35 @@ def read_config(list):
     'internal_policy': 'no'
   })
   cp.read(list)
+  config = Config()
   if cp.has_option('milter','datadir'):
       print "chdir:",cp.get('milter','datadir')
       os.chdir(cp.get('milter','datadir'))
 
   # milter section
   tempfile.tempdir = cp.get('milter','tempdir')
-  global socketname, timeout, check_user, log_headers
-  global internal_connect, internal_domains, trusted_relay, hello_blacklist
+  global socketname, timeout, check_user
+  global internal_connect, internal_domains, trusted_relay
   global case_sensitive_localpart, private_relay, internal_mta, max_demerits
   socketname = cp.get('milter','socket')
   timeout = cp.getintdefault('milter','timeout',600)
   check_user = cp.getaddrset('milter','check_user')
-  log_headers = cp.getboolean('milter','log_headers')
+  config.log_headers = cp.getboolean('milter','log_headers')
   internal_connect = cp.getlist('milter','internal_connect')
   internal_domains = cp.getlist('milter','internal_domains')
   trusted_relay = cp.getlist('milter','trusted_relay')
   private_relay = cp.getlist('milter','private_relay')
   internal_mta = cp.getlist('milter','internal_mta')
-  hello_blacklist = cp.getlist('milter','hello_blacklist')
+  config.hello_blacklist = cp.getlist('milter','hello_blacklist')
   case_sensitive_localpart = cp.getboolean('milter','case_sensitive_localpart')
   max_demerits = cp.getintdefault('milter','max_demerits',UNLIMITED)
-  errors_url = cp.get('milter','errors_url')
+  config.errors_url = cp.get('milter','errors_url')
+  if cp.has_option('milter','email_providers'):
+    config.email_providers = cp.get('milter','email_providers')
 
   # defang section
   global scan_rfc822, scan_html, block_chinese, scan_zip, block_forward
-  global banned_exts, porn_words, spam_words, from_words
+  global banned_exts
   if cp.has_section('defang'):
     section = 'defang'
     # for backward compatibility,
@@ -475,13 +511,17 @@ def read_config(list):
   scan_html = cp.getboolean(section,'scan_html')
   block_chinese = cp.getboolean(section,'block_chinese')
   block_forward = cp.getaddrset(section,'block_forward')
-  porn_words = [x for x in cp.getlist(section,'porn_words') if len(x) > 1]
-  spam_words = [x for x in cp.getlist(section,'spam_words') if len(x) > 1]
-  from_words = [x for x in cp.getlist(section,'from_words') if len(x) > 1]
+  config.porn_words = [x for x in cp.getlist(section,'porn_words') 
+        if len(x) > 1]
+  config.spam_words = [x for x in cp.getlist(section,'spam_words')
+        if len(x) > 1]
+  from_words = [x for x in cp.getlist(section,'from_words')
+        if len(x) > 1]
   if len(from_words) == 1 and from_words[0].startswith("file:"):
     with open(from_words[0][5:],'r') as fp:
       from_words = [s.strip() for s in fp.readlines()]
     from_words = [s for s in from_words if len(s) > 2]
+  config.from_words = from_words
 
   # scrub section
   global hide_path, reject_virus_from, internal_policy
@@ -517,9 +557,8 @@ def read_config(list):
   # dspam section
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt, dspam_internal
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
-  global whitelist_senders,whitelist_mx
-  whitelist_senders = cp.getaddrset('dspam','whitelist_senders')
-  whitelist_mx = cp.getlist('dspam','whitelist_mx')
+  config.whitelist_senders = cp.getaddrset('dspam','whitelist_senders')
+  config.whitelist_mx = cp.getlist('dspam','whitelist_mx')
   dspam_dict = cp.getdefault('dspam','dspam_dict')
   dspam_exempt = cp.getaddrset('dspam','dspam_exempt')
   dspam_whitelist = cp.getaddrset('dspam','dspam_whitelist')
@@ -534,7 +573,7 @@ def read_config(list):
 
   # spf section
   global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
-  global spf_accept_softfail,spf_accept_fail,supply_sender,access_file
+  global spf_accept_softfail,spf_accept_fail,supply_sender
   global trusted_forwarder
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
@@ -544,13 +583,13 @@ def read_config(list):
     spf_best_guess = cp.getboolean('spf','best_guess')
     spf_reject_noptr = cp.getboolean('spf','reject_noptr')
     supply_sender = cp.getboolean('spf','supply_sender')
-    access_file = cp.getdefault('spf','access_file')
+    config.access_file = cp.getdefault('spf','access_file')
     trusted_forwarder = cp.getlist('spf','trusted_forwarder')
   srs_config = cp.getdefault('srs','config')
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
   if SRS and srs_secret:
-    global ses,srs,srs_reject_spoofed,srs_domain,banned_users
+    global ses,srs,srs_reject_spoofed,srs_domain
     database = cp.getdefault('srs','database')
     srs_reject_spoofed = cp.getboolean('srs','reject_spoofed')
     maxage = cp.getintdefault('srs','maxage',8)
@@ -571,7 +610,7 @@ def read_config(list):
       srs_domain = set(cp.getlist('srs','srs'))
     srs_domain.update(cp.getlist('srs','sign'))
     srs_domain.add(cp.getdefault('srs','fwdomain'))
-    banned_users = cp.getlist('srs','banned_users')
+    config.banned_users = cp.getlist('srs','banned_users')
 
   if gossip:
     global gossip_node, gossip_ttl
@@ -588,25 +627,25 @@ def read_config(list):
 
   # greylist section
   if cp.has_option('greylist','dbfile'):
-    global greylist
-    grey_db = cp.getdefault('greylist','dbfile')
-    grey_days = cp.getintdefault('greylist','retain',36)
-    grey_expire = cp.getintdefault('greylist','expire',6)
-    grey_time = cp.getintdefault('greylist','time',5)
-    greylist = Greylist(grey_db,grey_time,grey_expire,grey_days)
+    config.grey_db = cp.getdefault('greylist','dbfile')
+    config.grey_days = cp.getintdefault('greylist','retain',36)
+    config.grey_expire = cp.getintdefault('greylist','expire',6)
+    config.grey_time = cp.getintdefault('greylist','time',5)
+    config.greylist = True
 
   # DKIM section
   if cp.has_option('dkim','privkey'):
-    global dkim_key,dkim_selector,dkim_domain
     dkim_keyfile = cp.getdefault('dkim','privkey')
-    dkim_selector = cp.getdefault('dkim','selector','default')
-    dkim_domain = cp.getdefault('dkim','domain')
-    if dkim_keyfile and dkim_domain:
+    config.dkim_selector = cp.getdefault('dkim','selector','default')
+    config.dkim_domain = cp.getdefault('dkim','domain')
+    if dkim_keyfile and config.dkim_domain:
       try:
 	with open(dkim_keyfile,'r') as kf:
-	  dkim_key = kf.read()
+	  config.dkim_key = kf.read()
       except:
 	milter_log.error('Unable to read: %s',dkim_keyfile)
+
+  return config
 
 def findsrs(fp):
   lastln = None
@@ -651,8 +690,8 @@ class SPFPolicy(object):
   def __init__(self,sender):
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
-    if access_file:
-      try: acf = anydbm.open(access_file,'r')
+    if config.access_file:
+      try: acf = anydbm.open(config.access_file,'r')
       except: acf = None
     else: acf = None
     self.acf = acf
@@ -860,7 +899,7 @@ class bmsMilter(Milter.Base):
         self.log("REJECT: numeric hello name:",hostname)
         self.setreply('550','5.7.1','hello name cannot be numeric ip')
         return Milter.REJECT
-      if hostname in hello_blacklist:
+      if hostname in config.hello_blacklist:
         self.log("REJECT: spam from self:",hostname)
         self.setreply('550','5.7.1',
           'Your mail server lies.  Its name is *not* %s.' % hostname)
@@ -979,7 +1018,7 @@ class bmsMilter(Milter.Base):
     self.efrom = self.canon_from
     # Some braindead MTAs can't be relied upon to properly flag DSNs.
     # This heuristic tries to recognize such.
-    self.is_bounce = (f == '<>' or t[0].lower() in banned_users
+    self.is_bounce = (f == '<>' or t[0].lower() in config.banned_users
         #and t[1] == self.hello_name
     )
 
@@ -1073,7 +1112,7 @@ class bmsMilter(Milter.Base):
         self.log("REJECT: banned domain",domain)
 	return self.delay_reject('550','5.7.1',template='bandom',domain=domain)
       if self.internal_connection:
-        wl_users = whitelist_senders.get(domain,())
+        wl_users = config.whitelist_senders.get(domain,())
         if user in wl_users or '' in wl_users:
           self.whitelist_sender = True
           
@@ -1308,7 +1347,7 @@ class bmsMilter(Milter.Base):
         # A proper SPF fail error message would read:
         # forger.biz [1.2.3.4] is not allowed to send mail with the domain
         # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
-        if q.d in hello_blacklist:
+        if q.d in config.hello_blacklist:
           self.offense(inc=4)
         return self.delay_reject(str(code),'5.7.1',txt)
     elif res == 'softfail':
@@ -1471,8 +1510,10 @@ class bmsMilter(Milter.Base):
     except:
       self.log("rcpt to",to,str)
       raise
-    if self.greylist and greylist and self.canon_from and not self.reject:
+    if self.greylist and config.greylist \
+	and self.canon_from and not self.reject:
       # no policy for trusted or internal
+      greylist = config.getGreylist()
       rc = greylist.check(self.connectip,self.canon_from,canon_to)
       if rc == 0:
         self.log("GREYLIST:",self.connectip,self.canon_from,canon_to)
@@ -1496,7 +1537,7 @@ class bmsMilter(Milter.Base):
     if lname == 'subject':
       
       # check for common spam keywords
-      for wrd in spam_words:
+      for wrd in config.spam_words:
         if val.find(wrd) >= 0:
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','That subject is not allowed')
@@ -1524,7 +1565,7 @@ class bmsMilter(Milter.Base):
           return Milter.REJECT
 
       # check for porn keywords
-      for w in porn_words:
+      for w in config.porn_words:
         if lval.find(w) >= 0:
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','That subject is not allowed')
@@ -1546,19 +1587,19 @@ class bmsMilter(Milter.Base):
 
     elif lname == 'from' and self.dspam:
       fname,email = parseaddr(val)
-      for w in spam_words:
+      for w in config.spam_words:
       	if fname.find(w) >= 0:
-          self.log('REJECT: %s: %s "%s"' % (name,val,w))
+          self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting')
           return self.bandomain()
-      for w in from_words:
+      for w in config.from_words:
       	if fname.find(w) >= 0:
-          self.log('REJECT: %s: %s "%s"' % (name,val,w))
+          self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting')
           return self.bandomain()
       # check for porn keywords
       lval = fname.lower().strip()
-      for w in porn_words:
+      for w in config.porn_words:
         if lval.find(w) >= 0:
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','Watch your language')
@@ -1608,7 +1649,7 @@ class bmsMilter(Milter.Base):
       domain = self.dkim_domain
     else:
       return Milter.REJECT
-    if domain in email_providers:
+    if domain in config.email_providers:
       sender = self.spf.s
       blacklist[sender] = None
       self.greylist = False   # don't delay - use spam for training
@@ -1663,7 +1704,7 @@ class bmsMilter(Milter.Base):
           self.log('AUTOREPLY: not whitelisted')
 
     # log selected headers
-    if log_headers or lname in ('subject','x-mailer'):
+    if config.log_headers or lname in ('subject','x-mailer'):
       self.log('%s: %s' % (name,val))
     elif self.trust_received and lname == 'received':
       self.trust_received = False
@@ -1832,14 +1873,15 @@ class bmsMilter(Milter.Base):
   def sign_dkim(self):
     if self.canon_from:
       user,domain = self.canon_from.split('@')
-    elif dkim_domain:
-      domain = dkim_domain
-    if dkim_key and domain == dkim_domain:
+    elif config.dkim_domain:
+      domain = config.dkim_domain
+    if config.dkim_key and domain == config.dkim_domain:
       self.fp.seek(self.body_start)
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
       try:
         d = dkim.DKIM(txt,logger=milter_log)
-	h = d.sign('default',domain,dkim_key,canonicalize=('relaxed','simple'))
+	h = d.sign(config.dkim_selector,domain,config.dkim_key,
+                canonicalize=('relaxed','simple'))
 	name,val = h.split(':',1)
         self.addheader(name,val.strip().replace('\r\n','\n'),0)
       except dkim.DKIMException as x:
@@ -2255,7 +2297,7 @@ class bmsMilter(Milter.Base):
       if not defanged and self.whitelist_sender:
         whitelisted = self.whitelist_rcpts()
         if whitelisted:
-          for mx in whitelist_mx:
+          for mx in config.whitelist_mx:
             try:
               self.send_rcpt(mx,whitelisted)
               self.log('Tell MX:',mx)
@@ -2372,7 +2414,7 @@ class bmsMilter(Milter.Base):
     if 'template' in kw:
       template = kw['template']
       del kw['template']
-      desc = "%s/%s?%s" % (errors_url,template,urllib.urlencode(kw))
+      desc = "%s/%s?%s" % (config.errors_url,template,urllib.urlencode(kw))
       self.setreply(code,xcode,desc.replace('%','%%'),*msg)
     else:
       try:
@@ -2452,12 +2494,12 @@ class bmsMilter(Milter.Base):
     return Milter.CONTINUE
 
 def main():
-  if access_file:
+  if config.access_file:
     try:
-      acf = anydbm.open(access_file,'r')
+      acf = anydbm.open(config.access_file,'r')
       acf.close()
     except:
-      milter_log.error('Unable to read: %s',access_file)
+      milter_log.error('Unable to read: %s',config.access_file)
       return
   try:
     global banned_ips
@@ -2477,6 +2519,11 @@ def main():
   except:
     milter_log.exception('Error reading banned_domains')
 
+  greylist = config.getGreylist()
+  if greylist:
+    print "Expired %d greylist records." % greylist.clean()
+    greylist.close()
+
   Milter.factory = bmsMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS
   if wiretap_dest or smart_alias or dspam_userdir:
@@ -2488,9 +2535,11 @@ def main():
   milter_log.info("bms milter startup")
   Milter.runmilter("pythonfilter",socketname,timeout)
   milter_log.info("bms milter shutdown")
+  # force dereference of local data structures before shutdown
+  getattr(local, 'whatever', None)
 
 if __name__ == "__main__":
-  read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
+  config = read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
 
   cbv_cache.load('send_dsn.log',age=30)
   auto_whitelist.load('auto_whitelist.log',age=120)
