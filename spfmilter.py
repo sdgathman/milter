@@ -59,6 +59,8 @@ class SPFPolicy(object):
   def close(self):
     if self.acf:
       self.acf.close()
+  def __enter__(self): return self
+  def __exit__(self,t,v,b): self.close()
 
   def getPolicy(self,pfx):
     acf = self.acf
@@ -170,9 +172,8 @@ class spfMilter(Milter.Base):
       )
       # Restrict SMTP AUTH users to authorized domains
       authsend = '@'.join((self.user,domain))
-      p = SPFPolicy(authsend,access_file=self.conf.access_file)
-      policy = p.getPolicy('smtp-auth:')
-      p.close()
+      with SPFPolicy(authsend,access_file=self.conf.access_file) as p:
+        policy = p.getPolicy('smtp-auth:')
       if policy:
         if policy != 'OK':
           self.log("REJECT: SMTP user",self.user,
@@ -228,57 +229,56 @@ class spfMilter(Milter.Base):
         hres,hcode,htxt = res,code,txt
     else: hres = None
 
-    p = SPFPolicy(q.s,self.conf.access_file)
-
-    if res == 'fail':
-      policy = p.getPolicy('spf-fail:')
-      if not policy or policy == 'REJECT':
-	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-	self.setreply(str(code),'5.7.1',txt)
-	# A proper SPF fail error message would read:
-	# forger.biz [1.2.3.4] is not allowed to send mail with the domain
-	# "forged.org" in the sender address.  Contact <postmaster@forged.org>.
-	return Milter.REJECT
-    if res == 'softfail':
-      policy = p.getPolicy('spf-softfail:')
-      if policy and policy == 'REJECT':
-	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-	self.setreply(str(code),'5.7.1',txt)
-	# A proper SPF fail error message would read:
-	# forger.biz [1.2.3.4] is not allowed to send mail with the domain
-	# "forged.org" in the sender address.  Contact <postmaster@forged.org>.
-	return Milter.REJECT
-    elif res == 'permerror':
-      policy = p.getPolicy('spf-permerror:')
-      if not policy or policy == 'REJECT':
-	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-	# latest SPF draft recommends 5.5.2 instead of 5.7.1
-	self.setreply(str(code),'5.5.2',txt,
-	  'There is a fatal syntax error in the SPF record for %s' % q.o,
-	  'We cannot accept mail from %s until this is corrected.' % q.o
-	)
-	return Milter.REJECT
-    elif res == 'temperror':
-      policy = p.getPolicy('spf-temperror:')
-      if not policy or policy == 'REJECT':
-	self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
-	self.setreply(str(code),'4.3.0',txt)
-	return Milter.TEMPFAIL
-    elif res == 'neutral' or res == 'none':
-      policy = p.getPolicy('spf-neutral:')
-      if policy and policy == 'REJECT':
-        self.log('REJECT NEUTRAL:',q.s)
-	self.setreply('550','5.7.1',
-  "%s requires an SPF PASS to accept mail from %s. [http://openspf.net]"
-	  % (receiver,q.s))
-	return Milter.REJECT
-    elif res == 'pass':
-      policy = p.getPolicy('spf-pass:')
-      if policy and policy == 'REJECT':
-        self.log('REJECT PASS:',q.s)
-	self.setreply('550','5.7.1',
-		"%s has been blacklisted by %s." % (q.s,receiver))
-	return Milter.REJECT
+    with SPFPolicy(q.s,self.conf.access_file) as p:
+      if res == 'fail':
+        policy = p.getPolicy('spf-fail:')
+        if not policy or policy == 'REJECT':
+          self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+          self.setreply(str(code),'5.7.1',txt)
+          # A proper SPF fail error message would read:
+          # forger.biz [1.2.3.4] is not allowed to send mail with the domain
+          # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
+          return Milter.REJECT
+      elif res == 'softfail':
+        policy = p.getPolicy('spf-softfail:')
+        if policy and policy == 'REJECT':
+          self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+          self.setreply(str(code),'5.7.1',txt)
+          # A proper SPF fail error message would read:
+          # forger.biz [1.2.3.4] is not allowed to send mail with the domain
+          # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
+          return Milter.REJECT
+      elif res == 'permerror':
+        policy = p.getPolicy('spf-permerror:')
+        if not policy or policy == 'REJECT':
+          self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+          # latest SPF draft recommends 5.5.2 instead of 5.7.1
+          self.setreply(str(code),'5.5.2',txt,
+            'There is a fatal syntax error in the SPF record for %s' % q.o,
+            'We cannot accept mail from %s until this is corrected.' % q.o
+          )
+          return Milter.REJECT
+      elif res == 'temperror':
+        policy = p.getPolicy('spf-temperror:')
+        if not policy or policy == 'REJECT':
+          self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
+          self.setreply(str(code),'4.3.0',txt)
+          return Milter.TEMPFAIL
+      elif res == 'neutral' or res == 'none':
+        policy = p.getPolicy('spf-neutral:')
+        if policy and policy == 'REJECT':
+          self.log('REJECT NEUTRAL:',q.s)
+          self.setreply('550','5.7.1',
+    "%s requires an SPF PASS to accept mail from %s. [http://openspf.net]"
+            % (receiver,q.s))
+          return Milter.REJECT
+      elif res == 'pass':
+        policy = p.getPolicy('spf-pass:')
+        if policy and policy == 'REJECT':
+          self.log('REJECT PASS:',q.s)
+          self.setreply('550','5.7.1',
+                  "%s has been blacklisted by %s." % (q.s,receiver))
+          return Milter.REJECT
     self.add_header('Received-SPF',q.get_header(res,receiver),0)
     if hres and q.h != q.o:
       self.add_header('X-Hello-SPF',hres,0)

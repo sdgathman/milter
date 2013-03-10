@@ -85,6 +85,10 @@ class SPFMilterTestCase(unittest.TestCase):
     pol = p.getPolicy('smtp-auth:')
     p.close()
     self.assertEqual(pol,None)
+    p = spfmilter.SPFPolicy('any@random.com',access_file='test/access.db')
+    pol = p.getPolicy('smtp-test:')
+    p.close()
+    self.assertEqual(pol,'REJECT')
 
   def testPass(self):
     milter = TestMilter()

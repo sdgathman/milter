@@ -23,7 +23,7 @@ BuildArch: noarch
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
 Requires: %{pythonbase} >= 2.6.5, %{pythonbase}-pyspf >= 2.0.6
-Requires: %{pythonbase}-pymilter >= 0.9.3, %{pythonbase}-pydns >= 2.3.5
+Requires: %{pythonbase}-pymilter >= 0.9.8, %{pythonbase}-pydns >= 2.3.5
 Conflicts: %{pythonbase}-pydkim < 0.5.3
 %ifos Linux
 Requires: chkconfig
@@ -210,6 +210,7 @@ rm -rf $RPM_BUILD_ROOT
 - Reject numeric HELO for spfmilter
 - from_words from file feature for bms milter
 - ban mailbox, not entire domain, for configured email_providers
+- Use pysqlite (included in python) for greylist database
 
 * Mon Jan 07 2013 Stuart Gathman <stuart@bmsi.com> 0.8.17-2
 - include logrotate for dkim-milter
