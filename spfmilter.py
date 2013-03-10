@@ -118,7 +118,6 @@ class spfMilter(Milter.Base):
     self.log("connect from %s at %s %s" % (hostname,hostaddr,connecttype))
     return Milter.CONTINUE
 
-  @Milter.noreply
   def hello(self,hostname):
     self.hello_name = hostname
     self.log("hello from %s" % hostname)
