@@ -53,7 +53,6 @@ class TestMilter(TestBase,spfmilter.spfMilter):
     spfmilter.config.access_file = 'test/access.db'
     spfmilter.spfMilter.__init__(self)
     #self.setsymval('j','test.milter.org')
-    pass
 
 zonedata = {
   'example.com': [
@@ -157,6 +156,7 @@ class SPFMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.CONTINUE)
     milter.close()
 
+  ## Test SMTP AUTH feature.
   def testAuth(self):
     milter = TestMilter()
     # Try a SMTP authorized user from an unauthorized IP, that is 

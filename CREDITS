@@ -7,6 +7,8 @@ real, usable Python extension.
 
 Other contributors (in random order):
 
+mvcstroomer <martin@stroomer.com>
+  for reporting that the SMTP AUTH feature was broken on spfmilter.py
 Dwayne Litzenberger, B.A.Sc.
   for library_dirs patch to compile on Debian 
 Dave MacQuigg 

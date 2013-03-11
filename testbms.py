@@ -21,7 +21,6 @@ class TestMilter(TestBase,bms.bmsMilter):
     TestBase.__init__(self)
     bms.bmsMilter.__init__(self)
     #self.setsymval('j','test.milter.org')
-    pass
 
 class BMSMilterTestCase(unittest.TestCase):
 
