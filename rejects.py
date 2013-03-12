@@ -19,12 +19,12 @@ for line in fp:
     if id in subdict:
       if id in ipdict:
         ip = ipdict[id]
-	del ipdict[id]
-	f,host,raw = ip.split(None,2)
-	if host in spamcnt:
-	  spamcnt[host] += 1
-	else:
-	  spamcnt[host] = 1
+        del ipdict[id]
+        f,host,raw = ip.split(None,2)
+        if host in spamcnt:
+          spamcnt[host] += 1
+        else:
+          spamcnt[host] = 1
       else: ip = ''
       print dt,tm,op,a[4].rstrip(),subdict[id]
       del subdict[id]

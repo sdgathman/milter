@@ -69,12 +69,12 @@ class SPFPolicy(object):
       return acf[pfx + self.sender]
     except KeyError:
       try:
-	return acf[pfx + self.domain]
+        return acf[pfx + self.domain]
       except KeyError:
-	try:
-	  return acf[pfx]
-	except KeyError:
-	  return None
+        try:
+          return acf[pfx]
+        except KeyError:
+          return None
   
 class spfMilter(Milter.Base):
   "Milter to check SPF.  Each connection gets its own instance."
@@ -104,7 +104,7 @@ class spfMilter(Milter.Base):
     if hostaddr and len(hostaddr) > 0:
       ipaddr = hostaddr[0]
       if iniplist(ipaddr,self.conf.internal_connect):
-	self.internal_connection = True
+        self.internal_connection = True
       if iniplist(ipaddr,self.conf.trusted_relay):
         self.trusted_relay = True
     else: ipaddr = ''
@@ -191,9 +191,9 @@ class spfMilter(Milter.Base):
   def eom(self):
     for name,val,idx in self.new_headers:
       try:
-	self.addheader(name,val,idx)
+        self.addheader(name,val,idx)
       except:
-	self.addheader(name,val)	# older sendmail can't insheader
+        self.addheader(name,val)	# older sendmail can't insheader
     return Milter.CONTINUE
 
   def check_spf(self):
@@ -213,17 +213,17 @@ class spfMilter(Milter.Base):
     if res not in ('pass','temperror'):
       if self.mailfrom != '<>':
 	# check hello name via spf unless spf pass
-	h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
-	hres,hcode,htxt = h.check()
-	if hres in ('deny','fail','neutral','softfail'):
-	  self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
-	  self.setreply('550','5.7.1',htxt,
-	    "The hostname given in your MTA's HELO response is not listed",
-	    "as a legitimate MTA in the SPF records for your domain.  If you",
-	    "get this bounce, the message was not in fact a forgery, and you",
-	    "should IMMEDIATELY notify your email administrator of the problem."
-	  )
-	  return Milter.REJECT
+        h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
+        hres,hcode,htxt = h.check()
+        if hres in ('deny','fail','neutral','softfail'):
+          self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
+          self.setreply('550','5.7.1',htxt,
+            "The hostname given in your MTA's HELO response is not listed",
+            "as a legitimate MTA in the SPF records for your domain.  If you",
+            "get this bounce, the message was not in fact a forgery, and you",
+            "should IMMEDIATELY notify your email administrator of the problem."
+          )
+          return Milter.REJECT
       else:
         hres,hcode,htxt = res,code,txt
     else: hres = None

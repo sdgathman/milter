@@ -50,10 +50,10 @@ def read_config(list):
     conf.reject = cp.getdefault('dkim','reject')
     if conf.keyfile and conf.domain:
       try:
-	with open(conf.keyfile,'r') as kf:
-	  conf.key = kf.read()
+        with open(conf.keyfile,'r') as kf:
+          conf.key = kf.read()
       except:
-	conf.log.error('Unable to read: %s',conf.keyfile)
+        conf.log.error('Unable to read: %s',conf.keyfile)
   return conf
 
 FWS = re.compile(r'\r?\n[ \t]+')
@@ -80,7 +80,7 @@ class dkimMilter(Milter.Base):
     if hostaddr and len(hostaddr) > 0:
       ipaddr = hostaddr[0]
       if iniplist(ipaddr,self.conf.internal_connect):
-	self.internal_connection = True
+        self.internal_connection = True
     else: ipaddr = ''
     self.connectip = ipaddr
     if self.internal_connection:
@@ -161,17 +161,17 @@ class dkimMilter(Milter.Base):
       author_domain = self.author.split('@',1)[-1]
       s = get_txt('_adsp._domainkey.'+author_domain)
       if s:
-	m = parse_tag_value(s)
-	if m.has_key('dkim'):
-	  self.log(s)
-	  adsp = m
+        m = parse_tag_value(s)
+        if m.has_key('dkim'):
+          self.log(s)
+          adsp = m
     # Remove existing Authentication-Results headers for our authserv_id
     for i,val in enumerate(self.arheaders,1):
       # FIXME: don't delete A-R headers from trusted MTAs
       ar = authres.AuthenticationResultsHeader.parse_value(FWS.sub('',val))
       if ar.authserv_id == self.receiver:
-	self.chgheader('authentication-results',i,'')
-	self.log('REMOVE: ',val)
+        self.chgheader('authentication-results',i,'')
+        self.log('REMOVE: ',val)
     # Check or sign DKIM
     self.fp.seek(0)
     if self.internal_connection:
@@ -197,16 +197,16 @@ class dkimMilter(Milter.Base):
       p = adsp['dkim']		# author domain policy
       if lp == p or p == 'discardable' and lp == 'all':
         if result == 'none':
-	  t = 'Missing'
-	else:
-	  t = 'Invalid'
-	self.setreply('550','5.7.1',
-	  '%s DKIM signature for %s with ADSP dkim=%s'%(t,self.author,p))
-	self.log('REJECT: %s DKIM signature'%t)
-	return Milter.REJECT
+          t = 'Missing'
+        else:
+          t = 'Invalid'
+        self.setreply('550','5.7.1',
+          '%s DKIM signature for %s with ADSP dkim=%s'%(t,self.author,p))
+        self.log('REJECT: %s DKIM signature'%t)
+        return Milter.REJECT
     if self.arresults:
       h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
-	results=self.arresults)
+        results=self.arresults)
       self.log(h)
       name,val = str(h).split(': ',1)
       self.addheader(name,val,0)
@@ -216,41 +216,41 @@ class dkimMilter(Milter.Base):
       conf = self.conf
       try:
         d = dkim.DKIM(txt,logger=conf.log)
-	h = d.sign(conf.selector,conf.domain,conf.key,
+        h = d.sign(conf.selector,conf.domain,conf.key,
                 canonicalize=('relaxed','simple'))
-	name,val = h.split(': ',1)
+        name,val = h.split(': ',1)
         self.addheader(name,val.strip().replace('\r\n','\n'),0)
       except dkim.DKIMException as x:
-	self.log('DKIM: %s'%x)
+        self.log('DKIM: %s'%x)
       except Exception as x:
-	conf.log.error("sign_dkim: %s",x,exc_info=True)
+        conf.log.error("sign_dkim: %s",x,exc_info=True)
       
   def check_dkim(self,txt):
       res = False
       conf = self.conf
       d = dkim.DKIM(txt,logger=conf.log)
       try:
-	res = d.verify()
-	if res:
-	  self.dkim_comment = 'Good %d bit signature.' % d.keysize
-	else:
-	  self.dkim_comment = 'Bad %d bit signature.' % d.keysize
+        res = d.verify()
+        if res:
+          self.dkim_comment = 'Good %d bit signature.' % d.keysize
+        else:
+          self.dkim_comment = 'Bad %d bit signature.' % d.keysize
       except dkim.DKIMException as x:
-	self.dkim_comment = str(x)
-	#self.log('DKIM: %s'%x)
+        self.dkim_comment = str(x)
+        #self.log('DKIM: %s'%x)
       except Exception as x:
-	self.dkim_comment = str(x)
-	conf.log.error("check_dkim: %s",x,exc_info=True)
+        self.dkim_comment = str(x)
+        conf.log.error("check_dkim: %s",x,exc_info=True)
       self.header_i = d.signature_fields.get(b'i')
       self.header_d = d.signature_fields.get(b'd')
       if res:
-	#self.log('DKIM: Pass (%s)'%d.domain)
+        #self.log('DKIM: Pass (%s)'%d.domain)
         self.dkim_domain = d.domain
       else:
-	fd,fname = tempfile.mkstemp(".dkim")
-	with os.fdopen(fd,"w+b") as fp:
-	  fp.write(txt)
-	self.log('DKIM: Fail (saved as %s)'%fname)
+        fd,fname = tempfile.mkstemp(".dkim")
+        with os.fdopen(fd,"w+b") as fp:
+          fp.write(txt)
+        self.log('DKIM: Fail (saved as %s)'%fname)
       return res
 
 if __name__ == "__main__":

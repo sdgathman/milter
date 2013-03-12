@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.191  2013/03/09 23:51:11  customdesigned
+# Move email_providers to config.  Move many other configs to Config object.
+#
 # Revision 1.185  2012/07/13 21:05:57  customdesigned
 # Don't check banned ips on submission port (587).
 #
@@ -640,10 +643,10 @@ def read_config(list):
     config.dkim_domain = cp.getdefault('dkim','domain')
     if dkim_keyfile and config.dkim_domain:
       try:
-	with open(dkim_keyfile,'r') as kf:
-	  config.dkim_key = kf.read()
+        with open(dkim_keyfile,'r') as kf:
+          config.dkim_key = kf.read()
       except:
-	milter_log.error('Unable to read: %s',dkim_keyfile)
+        milter_log.error('Unable to read: %s',dkim_keyfile)
 
   return config
 
@@ -796,16 +799,16 @@ class bmsMilter(Milter.Base):
     "Return a file like object that call self.log for each line"
     class LineWriter(object):
       def __init__(self):
-	self._buf = ''
+        self._buf = ''
 
       def write(self,s):
-	s = self._buf + s
-	pos = s.find('\n')
-	while pos >= 0:
-	  outerself.log(s[:pos])
-	  s = s[pos+1:]
-	  pos = s.find('\n')
-	self._buf = s
+        s = self._buf + s
+        pos = s.find('\n')
+        while pos >= 0:
+          outerself.log(s[:pos])
+          s = s[pos+1:]
+          pos = s.find('\n')
+        self._buf = s
     return LineWriter()
 
   def __init__(self):
@@ -1056,8 +1059,8 @@ class bmsMilter(Milter.Base):
           "verify =",self.getsymval('{verify}')
         )
       if self.reject:
-	self.log("REJECT CANCELED")
-	self.reject = None
+        self.log("REJECT CANCELED")
+        self.reject = None
 
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
     self.internal_domain = False
@@ -1110,7 +1113,7 @@ class bmsMilter(Milter.Base):
         user,domain = self.orig_from.split('@')
       if isbanned(domain,banned_domains):
         self.log("REJECT: banned domain",domain)
-	return self.delay_reject('550','5.7.1',template='bandom',domain=domain)
+        return self.delay_reject('550','5.7.1',template='bandom',domain=domain)
       if self.internal_connection:
         wl_users = config.whitelist_senders.get(domain,())
         if user in wl_users or '' in wl_users:
@@ -1197,48 +1200,48 @@ class bmsMilter(Milter.Base):
                 mfrom=self.efrom,helo=self.hello_name,ip=self.connectip)
       if domain and rc == Milter.CONTINUE \
 	  and not (self.internal_connection or self.trusted_relay):
-	rc = self.create_gossip(domain,res,hres)
+        rc = self.create_gossip(domain,res,hres)
     return rc
 
   def create_gossip(self,domain,res,hres):
     global gossip
     if gossip and gossip_node:
       if self.spf and self.spf.result == 'pass':
-	qual = 'SPF'
+        qual = 'SPF'
       elif res == 'pass':
-	qual = 'GUESS'
+        qual = 'GUESS'
       elif hres == 'pass':
-	qual = 'HELO'
-	domain = self.spf.h
+        qual = 'HELO'
+        domain = self.spf.h
       else:   
-	# No good identity: blame purported domain.  Qualify by SPF
-	# result so NEUTRAL will get separate reputation from SOFTFAIL.
-	qual = res
+        # No good identity: blame purported domain.  Qualify by SPF
+        # result so NEUTRAL will get separate reputation from SOFTFAIL.
+        qual = res
       try:
-	umis = gossip.umis(domain+qual,self.id+time.time())
-	res = gossip_node.query(umis,domain,qual,1)
-	if res:
-	  res,hdr,val = res
-	  self.add_header(hdr,val)
-	  a = val.split(',')
-	  self.reputation = int(a[-2])
-	  self.confidence = int(a[-1])
-	  self.umis = umis
-	  self.from_domain = domain
-	  self.from_qual = qual
-	  # We would like to reject on bad reputation here, but we
-	  # need to give special consideration to postmaster.  So
-	  # we have to wait until envrcpt().  Perhaps an especially
-	  # bad reputation could be rejected here.
-	  if self.reputation < -70 and self.confidence > 5:
-	    self.log('REJECT: REPUTATION')
-	    return self.delay_reject('550','5.7.1',template='illrepute',
+        umis = gossip.umis(domain+qual,self.id+time.time())
+        res = gossip_node.query(umis,domain,qual,1)
+        if res:
+          res,hdr,val = res
+          self.add_header(hdr,val)
+          a = val.split(',')
+          self.reputation = int(a[-2])
+          self.confidence = int(a[-1])
+          self.umis = umis
+          self.from_domain = domain
+          self.from_qual = qual
+          # We would like to reject on bad reputation here, but we
+          # need to give special consideration to postmaster.  So
+          # we have to wait until envrcpt().  Perhaps an especially
+          # bad reputation could be rejected here.
+          if self.reputation < -70 and self.confidence > 5:
+            self.log('REJECT: REPUTATION')
+            return self.delay_reject('550','5.7.1',template='illrepute',
                 domain=domain,score=self.reputation,qual=qual)
-	  if self.reputation > 40 and self.confidence > 0:
-	    self.greylist = False
+          if self.reputation > 40 and self.confidence > 0:
+            self.greylist = False
       except:
-	gossip = None
-	raise
+        gossip = None
+        raise
     return Milter.CONTINUE
 
   def check_spf(self):
@@ -1250,7 +1253,7 @@ class bmsMilter(Milter.Base):
         res,code,txt = q.best_guess('v=spf1 a mx')
       if res == 'pass':
         self.log("TRUSTED_FORWARDER:",tf)
-	self.whitelist = True
+        self.whitelist = True
         break
     else:
       q = spf.query(self.connectip,self.canon_from,self.hello_name,
@@ -1454,9 +1457,9 @@ class bmsMilter(Milter.Base):
                 self.setreply('550','5.7.1','Invalid SES signature')
                 return Milter.REJECT
               # reject for certain recipients are delayed until after DATA
-	      if auto_whitelist.has_precise_key(self.canon_from):
-		self.log("WHITELIST: DSN from",self.canon_from)
-	      else:
+              if auto_whitelist.has_precise_key(self.canon_from):
+                self.log("WHITELIST: DSN from",self.canon_from)
+              else:
                 #if srs_reject_spoofed \
                 #  and user.lower() not in ('postmaster','abuse'):
                 #  return self.forged_bounce(to)
@@ -1588,12 +1591,12 @@ class bmsMilter(Milter.Base):
     elif lname == 'from' and self.dspam:
       fname,email = parseaddr(val)
       for w in config.spam_words:
-      	if fname.find(w) >= 0:
+        if fname.find(w) >= 0:
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting')
           return self.bandomain()
       for w in config.from_words:
-      	if fname.find(w) >= 0:
+        if fname.find(w) >= 0:
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1','No soliciting')
           return self.bandomain()
@@ -1659,17 +1662,17 @@ class bmsMilter(Milter.Base):
     if not isbanned(domain,banned_domains):
       m = RE_MULTIMX.match(domain)
       if m:
-	orig = domain
-	domain = '*.' + domain[m.end():]
-	self.log('BAN DOMAIN:',orig,'->',domain)
+        orig = domain
+        domain = '*.' + domain[m.end():]
+        self.log('BAN DOMAIN:',orig,'->',domain)
       else:
-	if wild:
-	  a = domain.split('.')[wild:]
-	  if len(a) > 1: domain = '*.'+'.'.join(a)
-	self.log('BAN DOMAIN:',domain)
+        if wild:
+          a = domain.split('.')[wild:]
+          if len(a) > 1: domain = '*.'+'.'.join(a)
+        self.log('BAN DOMAIN:',domain)
       try:
-	fp = open('banned_domains','at')
-	print >>fp,domain 
+        fp = open('banned_domains','at')
+        print >>fp,domain 
       finally: fp.close()
       banned_domains.add(domain)
     return Milter.REJECT
@@ -1809,7 +1812,7 @@ class bmsMilter(Milter.Base):
     except Exception,x:
       if not self.ioerr:
         self.ioerr = x
-	self.log(x)
+        self.log(x)
       self.fp = None
     return Milter.CONTINUE
 
@@ -1868,7 +1871,7 @@ class bmsMilter(Milter.Base):
     elif self.spf:
       domain = self.spf.o
       if domain:
-	self.create_gossip(domain,self.spf_guess,self.spf_helo)
+        self.create_gossip(domain,self.spf_guess,self.spf_helo)
 
   def sign_dkim(self):
     if self.canon_from:
@@ -1880,14 +1883,14 @@ class bmsMilter(Milter.Base):
       txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
       try:
         d = dkim.DKIM(txt,logger=milter_log)
-	h = d.sign(config.dkim_selector,domain,config.dkim_key,
+        h = d.sign(config.dkim_selector,domain,config.dkim_key,
                 canonicalize=('relaxed','simple'))
-	name,val = h.split(':',1)
+        name,val = h.split(':',1)
         self.addheader(name,val.strip().replace('\r\n','\n'),0)
       except dkim.DKIMException as x:
-	self.log('DKIM: %s'%x)
+        self.log('DKIM: %s'%x)
       except Exception as x:
-	milter_log.error("sign_dkim: %s",x,exc_info=True)
+        milter_log.error("sign_dkim: %s",x,exc_info=True)
       
   def check_dkim(self):
       self.fp.seek(self.body_start)
@@ -1896,18 +1899,18 @@ class bmsMilter(Milter.Base):
       result = 'fail'
       d = dkim.DKIM(txt,logger=milter_log,minkey=768)
       try:
-	res = d.verify()
-	if res:
-	  dkim_comment = 'Good %d bit signature.' % d.keysize
-	  result = 'pass'
-	else:
-	  dkim_comment = 'Bad %d bit signature.' % d.keysize
+        res = d.verify()
+        if res:
+          dkim_comment = 'Good %d bit signature.' % d.keysize
+          result = 'pass'
+        else:
+          dkim_comment = 'Bad %d bit signature.' % d.keysize
       except dkim.DKIMException as x:
-	dkim_comment = str(x)
+        dkim_comment = str(x)
 	#self.log('DKIM: %s'%x)
       except Exception as x:
-	dkim_comment = str(x)
-	milter_log.error("check_dkim: %s",x,exc_info=True)
+        dkim_comment = str(x)
+        milter_log.error("check_dkim: %s",x,exc_info=True)
       self.dkim_domain = d.domain
       if authres: self.arresults.append(
         authres.DKIMAuthenticationResult(result=result,
@@ -1917,10 +1920,10 @@ class bmsMilter(Milter.Base):
 	)
       )
       if not res:
-	fd,fname = tempfile.mkstemp(".dkim")
-	with os.fdopen(fd,"w+b") as fp:
-	  fp.write(txt)
-	self.log('DKIM: Fail (saved as %s)'%fname)
+        fd,fname = tempfile.mkstemp(".dkim")
+        with os.fdopen(fd,"w+b") as fp:
+          fp.write(txt)
+        self.log('DKIM: Fail (saved as %s)'%fname)
       return res
 
   # check spaminess for recipients in dictionary groups
@@ -1950,26 +1953,26 @@ class bmsMilter(Milter.Base):
               if spf and self.external_spf:
                 q = spf.query('','','')
                 p = q.parse_header(self.external_spf)
-		self.spf_guess = p.get('bestguess',q.result)
-		self.spf_helo = p.get('helo',None)
-		self.log("External SPF:",self.spf_guess)
-		self.spf = q
+                self.spf_guess = p.get('bestguess',q.result)
+                self.spf_helo = p.get('helo',None)
+                self.log("External SPF:",self.spf_guess)
+                self.spf = q
               else:
                 self.spf = None
-	      if self.external_dkim:
-	        ar = authres.AuthenticationResultsHeader.parse_value(
+              if self.external_dkim:
+                ar = authres.AuthenticationResultsHeader.parse_value(
 			self.external_dkim)
-		for r in ar.results:
-		  if r.method == 'dkim' and r.result == 'pass':
-		    for p in r.properties:
-		      if p.type == 'header' and p.name == 'd':
-		        self.dkim_domain = p.value
+                for r in ar.results:
+                  if r.method == 'dkim' and r.result == 'pass':
+                    for p in r.properties:
+                      if p.type == 'header' and p.name == 'd':
+                        self.dkim_domain = p.value
             if user == 'bandom' and self.internal_connection:
-	      if self.spf:
+              if self.spf:
                 if self.spf_guess == 'pass' or q.result == 'none' \
 			or self.spf.o == self.dkim_domain:
-		  self.confidence = 0	# ban regardless of reputation status
-		  s = rcpt.split('@')[0][-1]
+                  self.confidence = 0	# ban regardless of reputation status
+                  s = rcpt.split('@')[0][-1]
                   self.bandomain(wild=s.isdigit() and int(s))
               user = 'spam'
             if user == 'spam' and self.internal_connection:
@@ -2083,15 +2086,15 @@ class bmsMilter(Milter.Base):
         if self.spf and self.mailfrom != '<>':
           # check that sender accepts quarantine DSN
           self.fp.seek(0)
-	  if self.spf_guess == 'pass' or self.cbv_needed:
-	    msg = mime.message_from_file(self.fp)
-	    if self.spf_guess == 'pass':
-	      rc = self.send_dsn(self.spf,msg,'quarantine',fail=True)
-	    else:
-	      rc = self.do_needed_cbv(msg)
-	    del msg
-	  else:
-	    rc = self.send_dsn(self.spf)
+          if self.spf_guess == 'pass' or self.cbv_needed:
+            msg = mime.message_from_file(self.fp)
+            if self.spf_guess == 'pass':
+              rc = self.send_dsn(self.spf,msg,'quarantine',fail=True)
+            else:
+              rc = self.do_needed_cbv(msg)
+            del msg
+          else:
+            rc = self.send_dsn(self.spf)
           if rc != Milter.CONTINUE:
             self.fp = None
             return rc
@@ -2155,7 +2158,7 @@ class bmsMilter(Milter.Base):
         self.whitelist = True
     elif policy != 'OK':
       if policy == 'BAN':
-	self.offense(inc=3)
+        self.offense(inc=3)
       elif self.offenses:
         self.offense()	 # multiple forged domains are extra evil
       return True
@@ -2166,11 +2169,11 @@ class bmsMilter(Milter.Base):
     for canon_to in self.recipients:
       user,domain = canon_to.split('@')
       for pat in internal_domains:
-	if fnmatchcase(domain,pat): break
+        if fnmatchcase(domain,pat): break
       else:
-	auto_whitelist[canon_to] = None
-	whitelisted.append(canon_to)
-	self.log('Auto-Whitelist:',canon_to)
+        auto_whitelist[canon_to] = None
+        whitelisted.append(canon_to)
+        self.log('Auto-Whitelist:',canon_to)
     return whitelisted
 
   def eom(self):
@@ -2207,24 +2210,24 @@ class bmsMilter(Milter.Base):
           return Milter.DISCARD
       
       if not self.internal_connection and self.has_dkim:
-	res = self.check_dkim()
+        res = self.check_dkim()
         if self.dkim_domain:
-	  p = SPFPolicy(self.dkim_domain)
+          p = SPFPolicy(self.dkim_domain)
           policy = p.getPolicy('dkim-%s:'%res)
           p.close()
-	  if policy == 'REJECT':
-	    self.log('REJECT: DKIM',res,self.dkim_domain)
-	    self.setreply('550','5.7.1','DKIM %s for %s'%(res,self.dkim_domain))
-	    return Milter.REJECT
+          if policy == 'REJECT':
+            self.log('REJECT: DKIM',res,self.dkim_domain)
+            self.setreply('550','5.7.1','DKIM %s for %s'%(res,self.dkim_domain))
+            return Milter.REJECT
       elif self.internal_connection:
         self.sign_dkim()	# FIXME: don't sign until accepting
 
       # add authentication results header
       if self.arresults:
-	h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
+        h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
 	  results=self.arresults)
-	name,val = str(h).split(': ',1)
-	self.add_header(name,val,0)
+        name,val = str(h).split(': ',1)
+        self.add_header(name,val,0)
 
       # analyze external mail for spam
       spam_checked = self.check_spam()  # tag or quarantine for spam

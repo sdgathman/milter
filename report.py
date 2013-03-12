@@ -42,10 +42,10 @@ def connections(fp):
       continue
     if id[0] == '[' and id[-1] == ']':
       try:
-	key = int(id[1:-1])
+        key = int(id[1:-1])
       except:
         print >>sys.stderr,'bad id:',line.rstrip()
-	continue
+        continue
     else: continue
     if op == 'connect':
       ip = a[4].rstrip()
@@ -58,65 +58,65 @@ def connections(fp):
     else:
       op = op.lower()
       try:
-	conn = conndict[key]
+        conn = conndict[key]
       except KeyError:
         try:
-	  conn = termdict[key]
-	  del termdict[key]
-	  conndict[key] = conn
-	except KeyError:
-	  print >>sys.stderr,'key error:',line.rstrip()
-	  continue
+          conn = termdict[key]
+          del termdict[key]
+          conndict[key] = conn
+        except KeyError:
+          print >>sys.stderr,'key error:',line.rstrip()
+          continue
       try:
-	if op == 'subject:':
-	  if len(a) > 4:
-	    conn.subject = a[4].rstrip()
-	elif op == 'innoc:':
-	  conn.innoc.append(a[4].rstrip())
-	elif op == 'whitelist':
-	  conn.whitelist = True
-	elif op == 'x-mailer:':
-	  if len(a) > 4:
-	    conn.mailer = a[4].rstrip()
+        if op == 'subject:':
+          if len(a) > 4:
+            conn.subject = a[4].rstrip()
+        elif op == 'innoc:':
+          conn.innoc.append(a[4].rstrip())
+        elif op == 'whitelist':
+          conn.whitelist = True
+        elif op == 'x-mailer:':
+          if len(a) > 4:
+            conn.mailer = a[4].rstrip()
         elif op == 'x-guessed-spf:':
           conn.spfguess = a[4]
-	elif op == 'received-spf:':
-	  conn.spfres,conn.spfmsg = a[4].rstrip().split(None,1)
-	elif op == 'received:':
-	  conn.received = a[4].rstrip()
-	elif op == 'temp':
-	  _,conn.tempfile = a[4].rstrip().split(None,1)
-	elif op == 'srs':
-	  _,conn.srsrcpt = a[4].rstrip().split(None,1)
-	elif op == 'mail':
-	  _,conn.mfrom = a[4].rstrip().split(None,1)
-	elif op == 'rcpt':
-	  _,rcpt = a[4].rstrip().split(None,1)
-	  conn.rcpt.append(rcpt)
-	elif op == 'hello':
-	  _,conn.helo = a[4].rstrip().split(None,1)
-	elif op in ('eom','dspam','abort'):
-	  del conndict[key]
-	  conn.enddt = dt
-	  conn.endtm = tm
-	  conn.result = op
-	  yield conn
-	  termdict[key] = Connection(conn.dt,conn.tm,conn.id,conn=conn)
-	elif op in ('reject:','dspam:','tempfail:','reject','fail:','honeypot:'):
-	  del conndict[key]
-	  conn.enddt = dt
-	  conn.endtm = tm
-	  conn.result = op
-	  conn.resmsg = a[4].rstrip()
-	  yield conn
-	  termdict[key] = Connection(conn.dt,conn.tm,conn.id,conn=conn)
-	elif op in ('fp:','spam:'):
-	  del conndict[key]
-	  termdict[key] = Connection(conn.dt,conn.tm,conn.id,conn=conn)
-	else:
-	  print >>sys.stderr,'unknown op:',line.rstrip()
+        elif op == 'received-spf:':
+          conn.spfres,conn.spfmsg = a[4].rstrip().split(None,1)
+        elif op == 'received:':
+          conn.received = a[4].rstrip()
+        elif op == 'temp':
+          _,conn.tempfile = a[4].rstrip().split(None,1)
+        elif op == 'srs':
+          _,conn.srsrcpt = a[4].rstrip().split(None,1)
+        elif op == 'mail':
+          _,conn.mfrom = a[4].rstrip().split(None,1)
+        elif op == 'rcpt':
+          _,rcpt = a[4].rstrip().split(None,1)
+          conn.rcpt.append(rcpt)
+        elif op == 'hello':
+          _,conn.helo = a[4].rstrip().split(None,1)
+        elif op in ('eom','dspam','abort'):
+          del conndict[key]
+          conn.enddt = dt
+          conn.endtm = tm
+          conn.result = op
+          yield conn
+          termdict[key] = Connection(conn.dt,conn.tm,conn.id,conn=conn)
+        elif op in ('reject:','dspam:','tempfail:','reject','fail:','honeypot:'):
+          del conndict[key]
+          conn.enddt = dt
+          conn.endtm = tm
+          conn.result = op
+          conn.resmsg = a[4].rstrip()
+          yield conn
+          termdict[key] = Connection(conn.dt,conn.tm,conn.id,conn=conn)
+        elif op in ('fp:','spam:'):
+          del conndict[key]
+          termdict[key] = Connection(conn.dt,conn.tm,conn.id,conn=conn)
+        else:
+          print >>sys.stderr,'unknown op:',line.rstrip()
       except Exception:
-	print >>sys.stderr,'error:',line.rstrip()
+        print >>sys.stderr,'error:',line.rstrip()
         traceback.print_exc()
 
 if __name__ == '__main__':
@@ -129,10 +129,10 @@ if __name__ == '__main__':
     for conn in connections(fp):
       if conn.rcpt and conn.mfrom:
         for r in conn.rcpt:
-	  if r.lower().find('iancarter') > 0: break
-	else:
-	  if conn.mfrom.lower().find('iancarter') < 0: continue
-	print >>sys.stderr,conn.result,conn.dt,conn.tm,conn.id,conn.subject,parse_addr(conn.mfrom),
-	for a in conn.rcpt:
-	  print parse_addr(a),
-	print
+          if r.lower().find('iancarter') > 0: break
+        else:
+          if conn.mfrom.lower().find('iancarter') < 0: continue
+        print >>sys.stderr,conn.result,conn.dt,conn.tm,conn.id,conn.subject,parse_addr(conn.mfrom),
+        for a in conn.rcpt:
+          print parse_addr(a),
+        print
