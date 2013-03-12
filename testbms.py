@@ -10,19 +10,51 @@ import email
 import sys
 #import pdb
 
+def DNSLookup(name,qtype,strict=True,timeout=None): return []
+
 try:
-  def DNSLookup(name,qtype,strict=True,timeout=None): return []
   import spf
-  spf.DNSLookup = DNSLookup
-except: pass
+except:
+  spf = None
 
 class TestMilter(TestBase,bms.bmsMilter):
   def __init__(self):
     TestBase.__init__(self)
+    bms.config = bms.Config()
+    bms.config.access_file = 'test/access.db'
     bms.bmsMilter.__init__(self)
-    #self.setsymval('j','test.milter.org')
+    self.setsymval('j','test.milter.org')
+    # disable SPF for now
+    if spf: spf.DNSLookup = DNSLookup
 
 class BMSMilterTestCase(unittest.TestCase):
+
+  ## Test SMTP AUTH feature.
+  def testAuth(self):
+    milter = TestMilter()
+    # Try a SMTP authorized user from an unauthorized IP, that is 
+    # authorized to use example.com
+    milter.setsymval('{auth_authen}','good')
+    milter.setsymval('{cipher_bits}','256')
+    milter.setsymval('{auth_ssf}','0')
+    rc = milter.connect('testAuth',ip='192.0.3.1')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='grief@example.com')
+    self.assertEqual(rc,Milter.ACCEPT)
+    # Try a user *not* authorized to use example.com
+    milter.setsymval('{auth_authen}','bad')
+    rc = milter.connect('testAuth',ip='192.0.2.1')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='good@example.com')
+    self.assertEqual(rc,Milter.REJECT)
+    # Try to break it by using an implicit domain
+    milter.setsymval('{auth_authen}','bad')
+    rc = milter.connect('testAuth',ip='192.0.2.1')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='good')
+    # unlike spfmilter, bms milter doesn't check AUTH for implicit domain
+    self.assertEqual(rc,Milter.ACCEPT)
+    milter.close()
 
   def testDefang(self,fname='virus1'):
     milter = TestMilter()

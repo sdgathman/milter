@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.192  2013/03/12 01:33:49  customdesigned
+# Tab nanny
+#
 # Revision 1.191  2013/03/09 23:51:11  customdesigned
 # Move email_providers to config.  Move many other configs to Config object.
 #
@@ -1875,7 +1878,10 @@ class bmsMilter(Milter.Base):
 
   def sign_dkim(self):
     if self.canon_from:
-      user,domain = self.canon_from.split('@')
+      a = self.canon_from.split('@')
+      if len(a) != 2:
+        a.append('localhost.localdomain')
+      user,domain = a
     elif config.dkim_domain:
       domain = config.dkim_domain
     if config.dkim_key and domain == config.dkim_domain:

@@ -5,8 +5,8 @@ import os
 
 def suite(): 
   s = unittest.TestSuite()
-  s.addTest(testbms.suite())
   s.addTest(testspf.suite())
+  s.addTest(testbms.suite())
   return s
 
 if __name__ == '__main__':
