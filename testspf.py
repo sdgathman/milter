@@ -2,6 +2,7 @@
 import unittest
 import Milter
 import spfmilter
+#import spfmartin as spfmilter
 import spf
 from Milter.test import TestBase
 import sys
@@ -58,6 +59,9 @@ zonedata = {
   'example.com': [
     ('TXT', ('v=spf1 ip4:192.0.2.1',))
   ],
+  'n.example.com': [
+    ('TXT', ('v=spf1 ip4:192.0.2.1',))
+  ],
   'bad.example.com': [
     ('TXT', ('v=spf1 a:192.0.2.1',))
   ],
@@ -99,10 +103,12 @@ class SPFMilterTestCase(unittest.TestCase):
 
   def testNeutral(self):
     milter = TestMilter()
+    # SPF result is Neutral, default access policy for example.com is REJECT
     rc = milter.connect('mail.example.com',ip='192.0.2.2')
     self.assertEqual(rc,Milter.CONTINUE)
     rc = milter.feedMsg('test1',sender='good@example.com')
     self.assertEqual(rc,Milter.REJECT)
+    # SPF result is None, default policy is OK
     rc = milter.connect('mail.example.com',ip='192.0.2.3')
     self.assertEqual(rc,Milter.CONTINUE)
     rc = milter.feedMsg('test1',sender='whatever@random.com')
@@ -112,7 +118,17 @@ class SPFMilterTestCase(unittest.TestCase):
   def testHelo(self):
     milter = TestMilter()
     # Reject numeric HELO
-    rc = milter.connect(helo='1.2.3.4',ip='192.0.3.1')
+    rc = milter.connect('testHelo',helo='1.2.3.4',ip='192.0.3.1')
+    self.assertEqual(rc,Milter.REJECT)
+    # HELO Neutral allowed by access policy
+    rc = milter.connect('testHelo',helo='example.com',ip='192.0.3.1')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='good@random.com')
+    self.assertEqual(rc,Milter.CONTINUE)
+    # HELO Neutral gets REJECT by default
+    rc = milter.connect('testHelo',helo='n.example.com',ip='192.0.3.1')
+    self.assertEqual(rc,Milter.CONTINUE)
+    rc = milter.feedMsg('test1',sender='good@random.com')
     self.assertEqual(rc,Milter.REJECT)
     milter.close()
 

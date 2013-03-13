@@ -215,7 +215,15 @@ class spfMilter(Milter.Base):
 	# check hello name via spf unless spf pass
         h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
         hres,hcode,htxt = h.check()
-        if hres in ('deny','fail','neutral','softfail'):
+        with SPFPolicy(self.hello_name,self.conf.access_file) as hp:
+          policy = hp.getPolicy('helo-%s:'%hres)
+          #print 'helo-%s:%s %s'%(hres,self.hello_name,policy)
+          if not policy:
+            if hres in ('deny','fail','neutral','softfail'):
+              policy = 'REJECT'
+            else:
+              policy = 'OK'
+        if policy != 'OK':
           self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
           self.setreply('550','5.7.1',htxt,
             "The hostname given in your MTA's HELO response is not listed",
