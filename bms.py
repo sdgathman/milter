@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.193  2013/03/12 03:29:55  customdesigned
+# Add SMTP AUTH test case for bms milter.
+#
 # Revision 1.192  2013/03/12 01:33:49  customdesigned
 # Tab nanny
 #
@@ -255,6 +258,7 @@
 
 import sys
 import os
+import os.path
 import StringIO
 import mime
 import email.Errors
@@ -374,12 +378,15 @@ class Config(object):
     self.banned_users = ()
     ## Log header fields
     self.log_headers = False
+    ## Data directory, or '' to use logdir
+    self.datadir = ''
 
   def getGreylist(self):
     if not self.greylist: return None
     greylist = getattr(local,'greylist',None)
     if not greylist:
-      greylist = Greylist(self.grey_db,self.grey_time,
+      grey_db = os.path.join(self.datadir,self.grey_db)
+      greylist = Greylist(grey_db,self.grey_time,
 	self.grey_expire,self.grey_days)
       local.greylist = greylist
     return greylist
@@ -477,9 +484,12 @@ def read_config(list):
   })
   cp.read(list)
   config = Config()
-  if cp.has_option('milter','datadir'):
-      print "chdir:",cp.get('milter','datadir')
-      os.chdir(cp.get('milter','datadir'))
+  config.logdir = cp.getdefault('milter','logdir',os.getcwd())
+  config.datadir = cp.getdefault('milter','datadir','')
+  # config reference files are in datadir by default
+  if config.datadir:
+      print "chdir:",config.datadir
+      os.chdir(config.datadir)
 
   # milter section
   tempfile.tempdir = cp.get('milter','tempdir')
@@ -625,7 +635,8 @@ def read_config(list):
       host,port = gossip.splitaddr(server)
       gossip_node = gossip.client.Gossip(host,port)
     else:
-      gossip_node = gossip.server.Gossip('gossip4.db',1000)
+      gossip_db = os.path.join(config.datadir,'gossip4.db')
+      gossip_node = gossip.server.Gossip(gossip_db,1000)
       for p in cp.getlist('gossip','peers'):
         host,port = gossip.splitaddr(p)
         gossip_node.peers.append(gossip.server.Peer(host,port))
@@ -2447,9 +2458,9 @@ class bmsMilter(Milter.Base):
     else:
       m = None
       if template_name:
-        fname = template_name+'.txt'
+        fname = os.path.join(config.datadir,template_name+'.txt')
         try:
-          template = file(template_name+'.txt').read()
+          template = file(fname).read()  # from datadir
           m = dsn.create_msg(q,self.recipients,msg,template)
           self.log('CBV:',sender,'Using:',fname)
         except IOError: pass
@@ -2510,6 +2521,10 @@ def main():
     except:
       milter_log.error('Unable to read: %s',config.access_file)
       return
+  # Banned ips and domains, and anything we forgot, are still in logdir
+  if config.logdir:
+      print "chdir:",config.logdir
+      os.chdir(config.logdir)
   try:
     global banned_ips
     banned_ips = set(addr2bin(ip) 

@@ -79,12 +79,12 @@ cat >$RPM_BUILD_ROOT/etc/logrotate.d/milter <<'EOF'
   copytruncate
   compress
 }
-%{datadir}/banned_ips {
+%{logdir}/banned_ips {
   rotate 7
   daily
   copytruncate
 }
-%{datadir}/banned_domains {
+%{logdir}/banned_domains {
   rotate 7
   weekly
   copytruncate
@@ -211,6 +211,8 @@ rm -rf $RPM_BUILD_ROOT
 - from_words from file feature for bms milter
 - ban mailbox, not entire domain, for configured email_providers
 - Use pysqlite (included in python) for greylist database
+- banned_domains and ips moved back to logdir for bms milter
+- straighten out datadir vs logdir for bms milter
 
 * Mon Jan 07 2013 Stuart Gathman <stuart@bmsi.com> 0.8.17-2
 - include logrotate for dkim-milter
