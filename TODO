@@ -9,9 +9,6 @@ When policy is OK, do not use cbv_cache for blacklist.
 Add postmaster option or general rcpt list to dsn.  Can send dsn to
 user and postmaster on the same connection.
 
-Check ESMTP NOTIFY before sending real DSNs.  Just use CBV if DSNs are
-not wanted.
-
 Support CBV to local domains and cache results so that invalid users
 can be rejected without maintaining valid user lists.
 
