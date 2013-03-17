@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.194  2013/03/15 23:04:38  customdesigned
+# Move many configs to datadir
+#
 # Revision 1.193  2013/03/12 03:29:55  customdesigned
 # Add SMTP AUTH test case for bms milter.
 #
@@ -484,8 +487,9 @@ def read_config(list):
   })
   cp.read(list)
   config = Config()
-  config.logdir = cp.getdefault('milter','logdir',os.getcwd())
+  # old configs have datadir for both logging and data
   config.datadir = cp.getdefault('milter','datadir','')
+  config.logdir = cp.getdefault('milter','logdir',config.datadir)
   # config reference files are in datadir by default
   if config.datadir:
       print "chdir:",config.datadir
@@ -2522,6 +2526,7 @@ def main():
       milter_log.error('Unable to read: %s',config.access_file)
       return
   # Banned ips and domains, and anything we forgot, are still in logdir
+  # (And logdir and datadir are the same for old configs.)
   if config.logdir:
       print "chdir:",config.logdir
       os.chdir(config.logdir)
