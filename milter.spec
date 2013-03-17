@@ -3,7 +3,11 @@
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
 %define __python python2.6
+%if "%{dist}" == ".el4" || "%{dist}" == ".el5"
+%define pythonbase python26
+%else
 %define pythonbase python
+%endif
 %define sysvinit milter.rc
 %define libdir %{_libdir}/pymilter
 %define logdir /var/log/milter
