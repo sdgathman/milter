@@ -4,10 +4,6 @@ Title: Python Milter Log Documentation
  Copyright (C) 2001,2002,2003,2004,2005-2011 Business Management Systems, Inc.
  See the file license.ht for copying conditions.  -->
 
-<style>
-DT              { font-weight: bolder; padding-top: 1em }
-</style>
-
 <h1> Milter Log Documentation </h1>
 
 The milter log from the bms.py application has a variety of "tags" in it that
@@ -56,8 +52,8 @@ MX record, we told the sender to try again later
 <dd> sender hung up on us
 
 <dt> REJECT: SPF fail 550 SPF fail: see 
-  http://openspf.com/why.html?sender=m.hendersonxk@163.net&ip=213.47.161.100
-<dd> message was reject because its sender's spf policy said to
+  http://openspf.org/why.html?sender=m.hendersonxk@163.net&amp;ip=213.47.161.100
+<dd> message was rejected because its sender's spf policy said to
 
 <dt> REJECT: Subject: Cialis - No prescription needed!
 <dd> message was rejected because its subject contained a bad expression

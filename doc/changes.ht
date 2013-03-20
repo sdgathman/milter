@@ -122,7 +122,7 @@ The spec file now build 3 RPMs:
 
 The spf module has been moved to the 
 <a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a> package.
-Download <a href="http://sourceforge.net/project/showfiles.php?group_id=139894&package_id=191419">here</a>.
+Download <a href="http://sourceforge.net/project/showfiles.php?group_id=139894&amp;package_id=191419">here</a>.
 
 <h3> 0.8.6 </h3>
 

@@ -113,7 +113,7 @@ the connection:
 <pre>
 2005Jul30 19:45:16 [93991] connect from [221.200.41.54] at ('221.200.41.54', 3581) EXTERNAL DYN
 2005Jul30 19:45:18 [93991] hello from adelphia.net
-2005Jul30 19:45:19 [93991] mail from <wendy.stubbsua@link-it.com> ()
+2005Jul30 19:45:19 [93991] mail from &lt;wendy.stubbsua@link-it.com> ()
 2005Jul30 19:45:19 [93991] REJECT: hello SPF: fail 550 access denied
 </pre>
 Note that HELO does not have any forwarding issues like MAIL FROM, and so

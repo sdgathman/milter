@@ -13,10 +13,9 @@ Title: Python Milter FAQ
 <li> <a href="#srs">Using SRS</a>
 </menu>
 
-<ol>
-
 <h3> <a name="compiling">Compiling Python Milter </a> </h3>
 
+<ol>
 <li> Q. I have tried to download the current milter code and my virus scan
 traps several viruses in the download.
 <p>  A. The milter source includes a number of deactivated viruses in
@@ -56,8 +55,9 @@ in setup.py to
             define_macros = [ ('MAX_ML_REPLY',1) ]
 </pre>
 
+</ol>
 <h3> <a name="running">Running Python Milter </a></h3>
-
+<ol>
 <li> Q. The sample.py milter prints a message, then just sits there.
 <pre>
 To use this with sendmail, add the following to sendmail.cf:
@@ -169,7 +169,7 @@ dev-null:	/dev/null
 </pre>
 Now your milter will get to the eom callback, and can change the
 envelope recipient at will.  Thanks to Dredd at 
-<a href=http://www.milter.org/>milter.org</a> for this solution.
+<a href="http://www.milter.org/">milter.org</a> for this solution.
 <p>
 
 <li> Q. I am having trouble with the setreply method.  It always outputs
@@ -227,9 +227,9 @@ have a local policy feature for more general checking of internal mail.
 	<code>/var/mail/mail_archive</code>.
 <p>  A. The 'mail' user needs to have write access.  Permission failures
 	should be logged as a traceback in milter.log if it doesn't.
-
+</ol>
 <h3> <a name="spf">Using SPF </a></h3>
-
+<ol>
 <li> Q. So how do I use the SPF support?  The sample.py milter doesn't seem
         to use it.
 <p>  A. The milter package contains several more useful milters.  The spfmilter.py milter checks SPF.  The bms.py milter supports spf and too many other
@@ -282,9 +282,9 @@ SPF-None:fbi.gov	REJECT
 SPF-Neutral:aol.com	REJECT
 SPF-Softfail:ebay.com	REJECT
 </pre>
-
+</ol>
 <h3> <a name="srs">Using SRS </a></h3>
-
+<ol>
 <li> Q. The SRS part doesn't seem to work as whenever I try to start
 	<code>/etc/init.d/pysrs</code>, I get this in
 	<code>/var/log/milter/pysrs.log</code>:

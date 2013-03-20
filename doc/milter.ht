@@ -49,7 +49,7 @@ Sendmail 8.14 finally supports modifying
 MAIL FROM via the milter API, and a data callback allowing spam to
 be rejected before beginning the DATA phase (even after accepting some
 recipients).
-<table><td>
+<table><tr><td>
 <a href="//www.python.org">
 <img src="python55.gif" align=left alt="A Python"></a>
 Pymilter provides a milter module for <a href="//www.python.org">Python</a>
