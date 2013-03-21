@@ -1,4 +1,5 @@
 from StandardGenerator import StandardGenerator
+from HTParser import HTParser
 
 class MilterGenerator(StandardGenerator):
     def __init__(self, file, rootdir, relthis):

@@ -1,4 +1,6 @@
 Title: Python Milters
+Author: Stuart D. Gathman
+Author-Email: stuart@gathman.org
 
 <!-- This is part of the Python Milter Applications documentation.
  Copyright (C) 2001,2002,2003,2004,2005-2011 Business Management Systems, Inc.
@@ -36,8 +38,8 @@ Mascot by students of <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian
 See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
 <a href="#support">Support</a> |
 <a href="#overview">Overview</a> |
-<a href="/python/dspam.html">pydspam</a> |
-<a href="/libdspam/dspam.html">libdspam</a>
+<a href="//bmsi.com/python/dspam.html">pydspam</a> |
+<a href="//bmsi.com/libdspam/dspam.html">libdspam</a>
 <p>
 <a href="//www.sendmail.org/">Sendmail</a> introduced a
 <a href="https://www.milter.org/developers/api/index"> new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.

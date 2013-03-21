@@ -27,7 +27,7 @@ and doesn't look for signatures.
 compile.
 <p>  A. Even though libmilter is officially supported in sendmail-8.12, 
 you need to build and install it in separate steps.  Take a look
-at the <a href="/aix/sendmail12.spec">RPM spec file</a> for sendmail-8.12.  
+at the <a href="//bmsi.com/aix/sendmail12.spec">RPM spec file</a> for sendmail-8.12.  
 The %prep section shows you how to create
 a site.config.m4 that enables MILTER.  The %build section shows you how
 to build libmilter in a separate invocation of make.  The %install section

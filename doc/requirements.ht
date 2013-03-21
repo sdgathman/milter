@@ -46,13 +46,13 @@ exporting new versions.  Until then, beware!
 
 <h3> <a name="aix4"> AIX 4.1.5 Requirements </a> </h3>
 To create sendmail RPMs for AIX, you can download my AIX 4.1.5 spec files 
-for <a href="/aix/sendmail.spec">sendmail-8.11.5</a> 
-or <a href="/aix/sendmail12.spec">sendmail-8.12.3</a>.  If you have
-not already set it up, I use a <a href="/aix/aix.spec">dummy RPM package</a>
+for <a href="//bmsi.com/aix/sendmail.spec">sendmail-8.11.5</a> 
+or <a href="//bmsi.com/aix/sendmail12.spec">sendmail-8.12.3</a>.  If you have
+not already set it up, I use a <a href="//bmsi.com/aix/aix.spec">dummy RPM package</a>
 to represent the stuff that comes with AIX.  You might also want
-my <a href="/aix/python.spec">python-2.1.1</a> spec file for AIX.  It
+my <a href="//bmsi.com/aix/python.spec">python-2.1.1</a> spec file for AIX.  It
 does not include Tk or curses modules, sorry.  If y'all trust me, you can
-download rpms for AIX 4.x from my <a href="/aix">AIX RPM directory</a>.
+download rpms for AIX 4.x from my <a href="//bmsi.com/aix">AIX RPM directory</a>.
 <p>
 Sendmail-8.12 renames 
 libsmutil.a to libsm.a.  Unfortunately, libsm.a is an important AIX system
