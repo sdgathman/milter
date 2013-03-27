@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.195  2013/03/17 17:43:42  customdesigned
+# Default logdir to datadir.
+#
 # Revision 1.194  2013/03/15 23:04:38  customdesigned
 # Move many configs to datadir
 #
@@ -886,6 +889,7 @@ class bmsMilter(Milter.Base):
     else: ipaddr = ''
     self.connectip = ipaddr
     self.missing_ptr = dynip(hostname,self.connectip)
+    self.localhost = iniplist(ipaddr,('127.*','::1'))
     if self.internal_connection:
       connecttype = 'INTERNAL'
     else:
@@ -903,8 +907,7 @@ class bmsMilter(Milter.Base):
     if self.dport != 587 and addr2bin(ipaddr) in banned_ips:
       self.log("REJECT: BANNED IP")
       return self.delay_reject('550','5.7.1', 'Banned for dictionary attacks')
-    if hostname == 'localhost' and not ipaddr.startswith('127.') \
-    or hostname == '.':
+    if hostname == 'localhost' and not self.localhost or hostname == '.':
       self.log("REJECT: PTR is",hostname)
       return self.delay_reject('550','5.7.1',
         '"%s" is not a reasonable PTR name'%hostname)
@@ -1107,7 +1110,7 @@ class bmsMilter(Milter.Base):
         else:
           policy = None
           # trust ourself not to be a zombie
-          if self.trusted_relay or self.connectip.strip() == '127.0.0.1':
+          if self.trusted_relay or self.localhost:
             policy = 'OK'
         if policy:
           if policy != 'OK':

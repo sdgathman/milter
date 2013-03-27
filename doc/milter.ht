@@ -27,7 +27,7 @@ This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
 (see <a href="license.html">LICENSE</a> for copying permissions for this
 documentation)<br>
-Last updated Aug 08, 2012</h4>
+Last updated Mar 21, 2013</h4>
 <table rules="none">
 <tr><td>
 <img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
@@ -68,6 +68,19 @@ for Postfix in Python.
 <h3> What's New </h3>
 
 <ul>
+<li> milter 0.8.18 adds test cases and SMTP AUTH policies in sendmail access
+for spf-milter.  You can now also configure an untrapped exception
+policy for spf-milter, and it rejects numeric HELO.  For the bms milter,
+from words can be in a file, and you can use the BAN feature for
+configured public email providers like gmail and yahoo - it bans the
+mailbox rather than the entire domain.
+<li> pymilter 0.9.8 adds a test modules for unit testing milters.
+It fixes a typo that prevented setsymlist from actually working all
+these years (misspelled as setsmlist).  The untrapped exception message 
+is changed to "pymilter: untrapped exception in milter app".
+<li> milter 0.8.17 reports keysize of DKIM signatures, adds a simple
+DKIM milter, and DKIM policies in the sendmail access file.  It
+also broke spf-milter for people using SMTP AUTH - sorry guys!
 <li> milter 0.8.16 has dkim signing, and Authentication-Results header.
 pymilter-0.9.7 has several improved diagnostics for milter programming errors.
 <li> milter has dkim checking and logging in CVS.  Will use DKIM Pass 
@@ -101,7 +114,7 @@ channel. There is a page describing how to register your nick at
 To accomodate other open source projects using pymilter, this package has been
 shedding modules which can be used by other packages.
 <ul>
-<li> The <a href="http://spidey2.bmsi.com/pymilter/">pymilter</a> package provides a robust toolkit for Python <a
+<li> The <a href="http://pythonhosted.org/pymilter/">pymilter</a> package provides a robust toolkit for Python <a
 href="#milter">milters</a> that wraps the C libmilter library.  There
 is also a <a href="http://code.google.com/p/ppymilter/">
 pure Python milter library</a> that implements the milter protocol in Python.
@@ -205,7 +218,7 @@ copy mail.
 
 <a href="https://www.milter.org/developers/api/index">
 Documentation for the C API</a> is provided with sendmail.  
-<a href="http://spidey2.bmsi.com/pymilter/">Documentation for
+<a href="http://pythonhosted.org/pymilter/">Documentation for
 pymilter</a> is provided via Doxygen.  Miltermodule provides a thin python
 wrapper for the C API.  Milter.py provides a simple OO wrapper on top of that.  
 <p>
