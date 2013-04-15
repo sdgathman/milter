@@ -255,7 +255,29 @@ For other systems:
 	and does just SPF.  It uses the sendmail <code>access</code>
 	file to configure SPF responses just like <code>bms.py</code>, but
 	supports only REJECT and OK.
-<li> Q. bms.py sends the SPF DSN at least once for domains that don't publish a
+<li> Q. Can I somehow disable SPF checking for outgoing mail?  The spf milter
+	is always writing a useless (and wrong) Received-SPF header when I
+	send mail.  
+<p>  A. Geeky answer: Please define what you mean by "outgoing".  An MTA
+	receives incoming mail transactions via SMTP, and either delivers them
+	via a local delivery agent or relays them to another MTA.  You might
+	call it "outgoing" when it relays to another MTA, but spf milter
+	is never invoked for "outgoing" connections, and can never
+	check SPF. (Sometimes you do want to check SPF on outgoing connections
+	as a last minute check that your own SPF record is correct,
+	and you have to use an SMTP proxy or another MTA instance to
+	do that.)  Note that a given incoming connection often results
+	in both local deliveries and relays to other MTAs.
+<p>
+	Useful answer: spfmilter.py does not check SPF for incoming
+	connections that are "internal".  You define IPs that are
+	considered "internal" in the configuration (e.g. 192.168.*), and
+	Transactions using SMTP AUTH are also considered internal.
+	You probably need to configure your internal email sources
+	to avoid spurious SPF checks.
+
+<li> Q. bms.py sends the SPF DSN at least once for domains that
+	don't publish a
         SPF.  How do I stop this behavior?
 <p>  A. The SPF response is controlled by <code>/etc/mail/access</code>
 	(actually the file you specify with <code>access_file</code> in
