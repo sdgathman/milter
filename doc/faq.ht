@@ -148,6 +148,8 @@ In pymilter.cfg:
 socket=/var/run/milter/pythonsock
 </pre>
 
+NOTE: for spfmilter, the config is "socketname" instead of "socket".
+<p>
 To have your python milter listen on port 1234 of the network interface with 
 IP 192.168.0.10:
 <p>
