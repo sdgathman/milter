@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <!-- THIS PAGE IS AUTOMATICALLY GENERATED.  DO NOT EDIT. -->
-<!-- Mon Apr 15 11:34:00 2013 -->
+<!-- Wed Apr 17 15:52:06 2013 -->
 <!-- USING HT2HTML 2.0 -->
 <!-- SEE http://ht2html.sf.net -->
 <!-- User-specified headers:
@@ -264,6 +264,36 @@ an active config file.
 If you are running bms.py, then the block_chinese option in 
 <code>/etc/mail/pymilter.cfg</code> controls this feature.
 <p>
+
+<li> Q. How do I use a network socket instead of a unix socket?
+<p>  A. Use <code>inet:</code> instead of <code>unix:</code> in the
+URL for your socket in sendmail.mc/sendmail.cf and in *milter.cfg.  The default
+protocol is unix.  So the default config would be:
+<p>
+In sendmail.mc:
+<pre>
+InputMailFilters=pythonfilter
+Xpythonfilter,        S=local:/var/run/milter/pythonsock
+</pre>
+In pymilter.cfg:
+<pre>
+[milter]
+socket=/var/run/milter/pythonsock
+</pre>
+
+To have your python milter listen on port 1234 of the network interface with 
+IP 192.168.0.10:
+<p>
+In sendmail.mc:
+<pre>
+InputMailFilters=pythonfilter
+Xpythonfilter,        S=inet:1234@192.168.0.10
+</pre>
+In pymilter.cfg:
+<pre>
+[milter]
+socket=inet:1234@192.168.0.10
+</pre>
 
 <li> Q. Why does sendmail coredump with milters on OpenBSD?
 <p>  A. Sendmail has a problem with unix sockets on old versions of OpenBSD.
