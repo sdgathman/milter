@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.196  2013/03/27 02:21:30  customdesigned
+# Recognize IPv6 localhost.
+#
 # Revision 1.195  2013/03/17 17:43:42  customdesigned
 # Default logdir to datadir.
 #
@@ -1728,7 +1731,7 @@ class bmsMilter(Milter.Base):
           self.log('AUTOREPLY: not whitelisted')
 
     # log selected headers
-    if config.log_headers or lname in ('subject','x-mailer'):
+    if config.log_headers or lname in ('subject','x-mailer','from'):
       self.log('%s: %s' % (name,val))
     elif self.trust_received and lname == 'received':
       self.trust_received = False
@@ -2533,6 +2536,11 @@ def main():
   if config.logdir:
       print "chdir:",config.logdir
       os.chdir(config.logdir)
+
+  cbv_cache.load('send_dsn.log',age=30)
+  auto_whitelist.load('auto_whitelist.log',age=120)
+  blacklist.load('blacklist.log',age=60)
+
   try:
     global banned_ips
     banned_ips = set(addr2bin(ip) 
@@ -2556,6 +2564,9 @@ def main():
     print "Expired %d greylist records." % greylist.clean()
     greylist.close()
 
+  if config.from_words:
+    print "%d from words banned" % len(config.from_words)
+
   Milter.factory = bmsMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS
   if wiretap_dest or smart_alias or dspam_userdir:
@@ -2572,10 +2583,6 @@ def main():
 
 if __name__ == "__main__":
   config = read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
-
-  cbv_cache.load('send_dsn.log',age=30)
-  auto_whitelist.load('auto_whitelist.log',age=120)
-  blacklist.load('blacklist.log',age=60)
       
   if dspam_dict:
     import dspam        # low level spam check
