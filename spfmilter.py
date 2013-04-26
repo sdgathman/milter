@@ -208,7 +208,7 @@ class spfMilter(Milter.Base):
       q = spf.query(self.connectip,self.canon_from,self.hello_name,
 	  receiver=receiver,strict=False)
       q.set_default_explanation(
-	'SPF fail: see http://openspf.net/why.html?sender=%s&ip=%s' % (q.s,q.i))
+	'SPF fail: see http://openspf.org/why.html?sender=%s&ip=%s' % (q.s,q.i))
       res,code,txt = q.check()
     if res not in ('pass','temperror'):
       if self.mailfrom != '<>':
@@ -276,7 +276,7 @@ class spfMilter(Milter.Base):
         if policy and policy == 'REJECT':
           self.log('REJECT NEUTRAL:',q.s)
           self.setreply('550','5.7.1',
-    "%s requires an SPF PASS to accept mail from %s. [http://openspf.net]"
+    "%s requires an SPF PASS to accept mail from %s. [http://openspf.org]"
             % (receiver,q.s))
           return Milter.REJECT
       elif res == 'pass':
