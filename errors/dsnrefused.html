@@ -1,9 +1,10 @@
-Hello. I work for Business Management Systems in Fairfax, VA. There is a 
-problem with:
+<h2> Sender Doesn't Exist </h2>
+There is a problem with:
 <blockquote>
      %mfrom
 </blockquote>
-not accepting DSNs for emails sent from that domain.
+not accepting DSNs for emails sent from that domain.  As far as the
+SMTP protocol is concerned, this means that sender does not exist.
 <p>
 We and possibly many other ISPs require mail servers contacting us to follow
 the minimum requirements for the functioning of mail over the Internet by
@@ -14,17 +15,21 @@ the purpose of error reporting the null email address ("&lt;&gt;") in the
 <dt>RFC 2821
 <dd> section 4.1.1.2 MAIL (BNF grammar)<br>
      section 6.1 Reliable Delivery and Replies by Email (para. 2)<br>
-     ftp://ftp.rfc-editor.org/in-notes/rfc2821.txt
+     <a href="ftp://ftp.rfc-editor.org/in-notes/rfc2821.txt">
+     ftp://ftp.rfc-editor.org/in-notes/rfc2821.txt</a>
 <dt>RFC 2505
 <dd> section 2. Recommendations 6a)<br>
      section 2.6.1. "MAIL From: &lt;&gt;"<br>
-     ftp://ftp.rfc-editor.org/in-notes/rfc2505.txt
+     <a href="ftp://ftp.rfc-editor.org/in-notes/rfc2505.txt">
+     ftp://ftp.rfc-editor.org/in-notes/rfc2505.txt</a>
 <dt>RFC 1123
 <dd> section 5.2.9 Command Syntax: RFC-821 Section 4.1.2<br>
-     ftp://ftp.rfc-editor.org/in-notes/rfc1123.txt
+     <a href="ftp://ftp.rfc-editor.org/in-notes/rfc1123.txt">
+     ftp://ftp.rfc-editor.org/in-notes/rfc1123.txt</a>
 <dt>RFC 821 (obsoleted by RFC 2821)
-<dd> section 4.1.2
-     ftp://ftp.rfc-editor.org/in-notes/rfc821.txt
+<dd> section 4.1.2<br>
+     <a href="ftp://ftp.rfc-editor.org/in-notes/rfc821.txt">
+     ftp://ftp.rfc-editor.org/in-notes/rfc821.txt</a>
 </dl>
 Your domain "%mfrom" no longer accepts &lt;&gt;. The need for the 
 null address ("&lt;&gt;") as an error reporting tool for mail server software

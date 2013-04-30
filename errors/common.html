@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Python Milter SMTP Rejection</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="generator" content="Python Milter">
+<style type="text/css">
+body { margin: 0px; }
+DT              { font-weight: bolder; padding-top: 1em }
+</style>
+</head>
+<body bgcolor="#ffffff" text="#000000"
+      
+      link="#0000bb"  vlink="#551a8b"
+      alink="#ff0000">
+<!-- start of page table -->
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<tr><!-- start of sidebar/body row -->
+<!-- start of sidebar cells -->
+<td width="150" valign="top" bgcolor="#cdba96" class="sidebar">
+<!-- start of sidebar table -->
+<table width="100%" border="0" cellspacing="0" cellpadding="3"
+       bgcolor="#ffffff">
+<tr><td bgcolor="#b78900"><b><font color="#ffffff">
+Subsections
+</font></b></td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/index.html">Introduction</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/changes.html">Changes</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/requirements.html">Requirements</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/faq.html">FAQ</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/policy.html">Policies</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/logmsgs.html">Log&nbsp;Messages</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://bmsi.com/mailman/listinfo/pymilter">Mailing&nbsp;List</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/credits.html">CREDITS</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/license.html">LICENSE</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://sourceforge.net"><img src="http://pythonhosted.org/milter/sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
+</td></tr>
+<tr><td bgcolor="#cdba96">&nbsp;
+<tr><td bgcolor="#b78900"><b><font color="#ffffff">
+Links
+</font></b></td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="https://www.milter.org/developers/api/index">C&nbsp;API</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://www.milter.org/">Milter.Org</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://www.python.org/">Python.Org</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://www.sendmail.org/">Sendmail.Org</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://www.openspf.net/">SPF</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/pymilter/">pymilter</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://pythonhosted.org/milter/pysrs.html">pysrs</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="https://launchpad.net/pydkim">pydkim</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://sspaeth.de/uploads/tmp/pydns/index.html">pydns</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://bmsi.com/python/pygossip.html">pygossip</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://bmsi.com/python/dspam.html">pydspam</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://bmsi.com/libdspam/dspam.html">libdspam</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">&nbsp;
+<tr><td bgcolor="#b78900"><b><font color="#ffffff">
+Translations
+</font></b></td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="http://webhostingrating.com/libs/bmsi-milter-be">Belorussian</a>
+</td></tr>
+<tr><td bgcolor="#cdba96">&nbsp;
+<tr><td bgcolor="#b78900"><b><font color="#ffffff">
+Email Us
+</font></b></td></tr>
+<tr><td bgcolor="#cdba96">
+<a href="mailto:stuart@gathman.org">Stuart D. Gathman</a>
+</td></tr>
+</table><!-- end of sidebar table -->
+
+</td>
+<td width="15">&nbsp;&nbsp;</td><!--spacer-->
+<!-- end of sidebar cell -->
+<!-- start of body cell -->
+<td valign="top" width="90%" class="body"><br>
+<!-- This is part of the Python Milter Application.
+ Copyright (C) 2001,2002,2003,2004,2005-2013 Business Management Systems, Inc.
+ See the file license.ht for copying conditions.  -->
+
+<table rules="none">
+<tr><td>
+<img src="http://bmsi.com/python/Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top"> <br>
+Mascot by students of <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
+</td>
+<td>
+<h1> Python Milter SMTP Rejection </h1>
+
+Hello, I'm <a href="http://pythonhosted.org/milter">Python Milter</a>
+and I work for Business Management Systems in Fairfax, VA.  I seem
+to have rejected an email message you tried to send.  A more 
+detailed explanation follows.
+
+</td></tr>
+</table>
+<hr>
+
+%body
+
+</td><!-- end of body cell -->
+</tr><!-- end of sidebar/body row -->
+</table><!-- end of page table -->
+</body></html>

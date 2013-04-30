@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.197  2013/04/25 18:23:09  customdesigned
+# auto_whitelist, blacklist were loading from wrong directory.
+#
 # Revision 1.196  2013/03/27 02:21:30  customdesigned
 # Recognize IPv6 localhost.
 #
@@ -1332,8 +1335,10 @@ class bmsMilter(Milter.Base):
           return self.delay_reject('550','5.7.1',htxt,
             "The hostname given in your MTA's HELO response is not listed",
             "as a legitimate MTA in the SPF records for your domain.  If you",
-            "get this bounce, the message was not in fact a forgery, and you",
-            "should IMMEDIATELY notify your email administrator of the problem."
+            "get this bounce, the message was not in fact a forgery, please",
+            "IMMEDIATELY notify your email administrator of the problem.",
+	    template='helofail',mfrom=self.efrom,
+	    helo=self.hello_name,ip=self.connectip
           )
         if hres == 'none' and spf_best_guess \
           and not dynip(self.hello_name,self.connectip):
