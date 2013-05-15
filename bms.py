@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.198  2013/04/30 23:06:47  customdesigned
+# Add helofail web template failure message and add common template for L&F.
+#
 # Revision 1.197  2013/04/25 18:23:09  customdesigned
 # auto_whitelist, blacklist were loading from wrong directory.
 #
@@ -866,6 +869,18 @@ class bmsMilter(Milter.Base):
   def add_header(self,name,val,idx=-1):
     self.new_headers.append((name,val,idx))
     self.log('%s: %s' % (name,val))
+
+  def apply_headers(self):
+    "Send accumulated milter generated headers to MTA"
+    for name,val,idx in self.new_headers:
+      try:
+        try:
+          self.addheader(name,val,idx)
+        except TypeError:
+          val = val.replace('\x00',r'\x00')
+          self.addheader(name,val,idx)
+      except Milter.error:
+        self.addheader(name,val)        # older sendmail can't insheader
 
   def delay_reject(self,*args,**kw):
     if delayed_reject:
@@ -1956,7 +1971,7 @@ class bmsMilter(Milter.Base):
         with os.fdopen(fd,"w+b") as fp:
           fp.write(txt)
         self.log('DKIM: Fail (saved as %s)'%fname)
-      return res
+      return result
 
   # check spaminess for recipients in dictionary groups
   # if there are multiple users getting dspammed, then
@@ -2215,6 +2230,7 @@ class bmsMilter(Milter.Base):
       self.tempname = None
       return Milter.TEMPFAIL
     if not self.fp:
+      self.apply_headers()
       return Milter.ACCEPT      # no message collected - so no eom processing
 
     if self.is_bounce and len(self.recipients) > 1:
@@ -2251,6 +2267,8 @@ class bmsMilter(Milter.Base):
             self.log('REJECT: DKIM',res,self.dkim_domain)
             self.setreply('550','5.7.1','DKIM %s for %s'%(res,self.dkim_domain))
             return Milter.REJECT
+          if policy == 'WHITELIST':
+            self.whitelist = True
       elif self.internal_connection:
         self.sign_dkim()	# FIXME: don't sign until accepting
 
@@ -2295,6 +2313,7 @@ class bmsMilter(Milter.Base):
         milter_log.warn("MALFORMED: %s",fname)  # log filename
         if self.internal_connection:
           # accept anyway for now
+          self.apply_headers()
           return Milter.ACCEPT
         self.setreply('554','5.7.7',
                 'Boundary error in your message, are you a spammer?')
@@ -2339,16 +2358,7 @@ class bmsMilter(Milter.Base):
             except Exception,x:
               self.log('Tell MX:',mx,x)
 
-    for name,val,idx in self.new_headers:
-      try:
-        try:
-          self.addheader(name,val,idx)
-        except TypeError:
-          val = val.replace('\x00',r'\x00')
-          self.addheader(name,val,idx)
-      except Milter.error:
-        self.addheader(name,val)        # older sendmail can't insheader
-
+    self.apply_headers()
 
     # Do not send CBV to internal domains (since we'll just get
     # the "Fraudulent MX" error).  Whitelisted senders clearly do not
