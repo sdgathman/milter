@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.199  2013/05/15 17:23:41  customdesigned
+# Support DKIM whitelisting
+#
 # Revision 1.198  2013/04/30 23:06:47  customdesigned
 # Add helofail web template failure message and add common template for L&F.
 #
@@ -297,6 +300,7 @@ from Milter.greysql import Greylist
 from fnmatch import fnmatchcase
 from email.Utils import getaddresses
 from glob import glob
+from ipaddr import IPNetwork
 
 # Import gossip if available
 try:
@@ -679,6 +683,14 @@ def read_config(list):
         milter_log.error('Unable to read: %s',dkim_keyfile)
 
   return config
+
+def maskip(ip):
+  n = IPNetwork(ip)
+  if n.version == 4:
+    hostbits = 8
+  else:
+    hostbits = 64
+  return str(n.supernet(hostbits).network)
 
 def findsrs(fp):
   lastln = None
@@ -1082,6 +1094,7 @@ class bmsMilter(Milter.Base):
       #   any successful authentication is considered INTERNAL
       # Detailed authorization policy is configured in the access file below.
       self.internal_connection = True
+      self.trust_dkim = self.trust_spf = True
       auth_type = self.getsymval('{auth_type}')
       ssl_bits =  self.getsymval('{cipher_bits}')
       self.log(
@@ -1561,6 +1574,10 @@ class bmsMilter(Milter.Base):
 	and self.canon_from and not self.reject:
       # no policy for trusted or internal
       greylist = config.getGreylist()
+      if self.spf and self.spf_guess == 'pass':
+        ip = self.spf.d
+      else:
+        ip = maskip(self.connectip)
       rc = greylist.check(self.connectip,self.canon_from,canon_to)
       if rc == 0:
         self.log("GREYLIST:",self.connectip,self.canon_from,canon_to)
