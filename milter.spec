@@ -19,7 +19,7 @@ Summary:  BMS spam and reputation milter
 Version: 0.8.18
 Release: 3%{dist}.py26
 Source: milter-%{version}.tar.gz
-#Patch: %{name}-%{version}.patch
+Patch: %{name}-%{version}.patch
 License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
@@ -62,7 +62,7 @@ access file and can be tailored by domain.
 
 %prep
 %setup -q -n milter-%{version}
-#patch -p0 -b .bms
+%patch -p0 -b .bms
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -210,6 +210,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Fri Feb 28 2014 Stuart Gathman <stuart@gathman.org> 0.8.18-3
 - Use daemonize instead of start.sh, which is gone from pymilter
+- Fix typo in maskip logic for greylisting
 
 * Sun Mar 17 2013 Stuart Gathman <stuart@bmsi.com> 0.8.18-2
 - Default logdir to datadir for compatibility with old configs.
