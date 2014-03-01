@@ -6,6 +6,11 @@ Title: Recent Changes
 
 <h2> Recent Changes for the <code>pymilter</code> project </h2>
 
+<h3> 0.9.8 </h3>
+Add Milter.test module for unit testing milters.  Fix typo that prevented
+setsymlist from being active. Change untrapped exception message to:
+"pymilter: untrapped exception in milter app"
+
 <h3> 0.9.7 </h3>
 Raise RuntimeError when result != CONTINUE for @noreply and @nocallback
 decorators.  Remove redundant table in miltermodule (low level change).
@@ -51,6 +56,38 @@ NS records are now supported by Milter.dns.  I suspect that it might
 be useful to track reputation by nameserver to fight throwaway domains.
 
 <h2> Recent Changes for the <code>milter</code> project </h2>
+
+<h3> 0.8.18-2 </h3>
+Default logdir to datadir for compatibility with old configs.
+Add logdir to sample config.
+
+<h3> 0.8.18-1 </h3>
+<ul>
+<li>test cases and bug fixes for spfmilter.
+<li>configure untrapped_exception policy for spfmilter.
+<li>reject numeric HELO for spfmilter.
+<li>from_words from file feature for bms milter
+<li> ban mailbox, not entire domain, for configured email_providers
+<li> Use pysqlite (included in python) for greylist database
+<li> banned_domains and ips moved back to logdir for bms milter
+<li> straighten out datadir vs logdir for bms milter
+</ul>
+
+<h3> 0.8.17-2 </h3>
+Include logrotate for dkim-milter.
+
+<h3> 0.8.17-1 </h3>
+<ul>
+<li> report keysize of DKIM signatures.
+<li> simple DKIM milter as another sample
+<li> basic DKIM signing support
+<li> Implement DKIM policy in access file.  
+<li> Parse Authentication-Results header to get dkim result for feedback mail.  
+<li> Let DKIM confirm domain for missing or neutral SPF result.
+</ul>
+
+<h3> 0.8.16 </h3>
+Experimental DKIM support. Reference templated URLs in error messages.
 
 <h3> 0.8.15 </h3>
 Support (and require for RPM packages) Python2.6.

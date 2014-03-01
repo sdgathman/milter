@@ -68,6 +68,13 @@ for Postfix in Python.
 <h3> What's New </h3>
 
 <ul>
+<li> pyspf 2.0.8 adds much improved python3 support.  All test suites
+now pass with python3 and py3dns.  SPF records are restricted to 7-bit
+ascii.  But some people try to use an extended set anyway, crashing 
+pyspf.  We now return PermError for non-ascii SPF records.  IP address
+parsing and arithmetic is now handled by the ipaddr (ipaddress in python3)
+module.  I fixed a bug caused by a null CNAME in cache.
+
 <li> milter 0.8.18 adds test cases and SMTP AUTH policies in sendmail access
 for spf-milter.  You can now also configure an untrapped exception
 policy for spf-milter, and it rejects numeric HELO.  For the bms milter,
