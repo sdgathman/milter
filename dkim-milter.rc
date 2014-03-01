@@ -8,7 +8,7 @@
 # config: /etc/mail/dkim-milter.cfg
 # pidfile: /var/run/milter/dkim-milter.pid
 
-python="python2.6"
+python="python"
 
 pidof() {
 	set - ""
@@ -23,10 +23,14 @@ pidof() {
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-[ -x /usr/lib/pymilter/start.sh ] || exit 0
-
 RETVAL=0
 prog="dkim-milter"
+datadir="/var/lib/milter"
+logdir="/var/log/milter"
+piddir="/var/run/milter"
+libdir="/usr/lib/pymilter"
+script="dkim-milter"
+test -s /usr/lib/pymilter/${script}.py && test -x /usr/sbin/daemonize || exit 0
 
 start() {
 	# Start daemons.
@@ -36,10 +40,20 @@ start() {
 		mkdir -p /var/run/milter
 		chown mail:mail /var/run/milter
 	fi
-	daemon --check milter --user mail /usr/lib/pymilter/start.sh dkim-milter
+	if test -s ${datadir}/${script}.py; then
+	  workdir="${datadir}" # use data dir if it exists for debugging
+	elif test -s ${logdir}/${script}.py; then
+	  workdir="${logdir}" # use log dir if it exists for debugging
+	else
+	  workdir="${libdir}"
+	fi
+	daemon --check ${prog} --pidfile "${piddir}/${prog}.pid" --user mail \
+	daemonize -a -e "${logdir}/${prog}.log" -o "${logdir}/${prog}.log" \
+		-c "${workdir}" -p "${piddir}/${prog}.pid" \
+		/usr/bin/${python} ${script}.py 
 	RETVAL=$?
 	echo
-	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/dkim-milter
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/${prog}
 	return $RETVAL
 }
 
@@ -49,7 +63,7 @@ stop() {
 	killproc milter
 	RETVAL=$?
 	echo
-	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/dkim-milter
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/${prog}
 	return $RETVAL
 }
 

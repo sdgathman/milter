@@ -47,7 +47,7 @@ start() {
 		mkdir -p /var/run/milter
 		chown mail:mail /var/run/milter
 	fi
-	daemon --check pysrs --pidfile "${piddir}/${prog}.pid" --user mail \
+	daemon --check ${prog} --pidfile "${piddir}/${prog}.pid" --user mail \
 	daemonize -a -e "${logdir}/${prog}.log" -o "${logdir}/${prog}.log" \
 		-c "${workdir}" -p "${piddir}/${prog}.pid" \
 		/usr/bin/${python} ${script}.py 
