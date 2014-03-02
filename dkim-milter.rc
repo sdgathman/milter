@@ -60,7 +60,7 @@ start() {
 stop() {
 	# Stop daemons.
 	echo -n "Shutting down $prog: "
-	killproc milter
+	killproc -p "${piddir}/${prog}.pid" ${prog}
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/${prog}
