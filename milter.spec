@@ -17,7 +17,7 @@ Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
 Version: 0.8.18
-Release: 3%{dist}.py26
+Release: 4%{dist}.py26
 Source: milter-%{version}.tar.gz
 Patch: %{name}-%{version}.patch
 License: GPLv2+
@@ -208,6 +208,9 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Fri Feb 28 2014 Stuart Gathman <stuart@gathman.org> 0.8.18-4
+- Fix errors in initscripts
+
 * Fri Feb 28 2014 Stuart Gathman <stuart@gathman.org> 0.8.18-3
 - Use daemonize instead of start.sh, which is gone from pymilter
 - Fix typo in maskip logic for greylisting
