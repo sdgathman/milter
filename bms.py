@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.201  2014/03/01 05:19:08  customdesigned
+# Release 0.8.18-3
+#
 # Revision 1.200  2013/07/17 21:27:02  customdesigned
 # Add logic to mask IPs or use authenticated domain for greylisting.
 # Should be a config option, however.
@@ -2039,7 +2042,8 @@ class bmsMilter(Milter.Base):
               if self.spf:
                 if self.spf_guess == 'pass' or q.result == 'none' \
 			or self.spf.o == self.dkim_domain \
-			or self.dkim_domain in config.email_providers:
+			or (self.dkim_domain and 
+				self.dkim_domain in config.email_providers):
                   self.confidence = 0	# ban regardless of reputation status
                   s = rcpt.split('@')[0][-1]
                   self.bandomain(wild=s.isdigit() and int(s))
