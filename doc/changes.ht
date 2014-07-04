@@ -6,6 +6,17 @@ Title: Recent Changes
 
 <h2> Recent Changes for the <code>pymilter</code> project </h2>
 
+<h3> 1.0 </h3>
+Remove start.sh to track EPEL repository, use daemonize as replacement
+in RPMs using pymilter.
+Allow ACCEPT as untrapped exception policy.
+Support optional dir for getaddrset and getaddrdict in Milter.config to
+reduce config clutter.
+Show registered milter name in untrapped exception message.
+Include selinux subpackage (FIXME: selinux subpackage should not care about pymilter version).
+Support sqlite3 for greylisting, and provide Milter.greylist export and Milter.greysql import to migrate data.
+
+
 <h3> 0.9.8 </h3>
 Add Milter.test module for unit testing milters.  Fix typo that prevented
 setsymlist from being active. Change untrapped exception message to:

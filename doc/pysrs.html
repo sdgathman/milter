@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Python SRS</title>
+</head><body>
+
+<P ALIGN="CENTER"><A HREF="http://www.anybrowser.org/campaign/">
+<IMG SRC="/art/brain1.gif"
+ALT="Viewable With Any Browser" BORDER="0"></A>
+
+<img src="/art/banner_4.gif" width="468" height="60" border="0"
+	usemap="#banner_4" alt="Your vote?">
+<map name="banner_4">
+  <area shape="rect" coords="330,25,426,59"
+  	href="http://education-survey.org/" alt="I Disagree">
+  <area shape="rect" coords="234,28,304,57" href="http://sepschool.org/" alt="I Agree">
+</map>
+
+</P>
+<h1 align=center>Sender Rewriting Scheme in Python</h1>
+<h4 align=center>
+This web page is written by Stuart D. Gathman<br>and<br>sponsored by
+<a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
+Last updated Jul 31, 2006</h4>
+
+<p>
+This is a <a href="http://www.python.org/">Python</a> implementation of
+the <a href="http://www.openspf.org/SRS">Sender Rewriting Scheme</a>.
+It is a fairly direct translation of the
+<a href="http://www.libsrs2.org/">draft implementation in Perl</a>
+by Shevek.  It includes a test suite, which currently checks four
+levels of forwarding and subsequent reversal for the Guarded, DB, and
+Reversible implementations.
+<ul>
+<li>This package includes scripts to be used as sendmail program maps.  See
+<a href="http://asarian-host.net/srs/sendmailsrs.htm">sendmail integration</a>
+for an explanation and instructions on incorporating SRS into
+<code>sendmail.cf</code>, substituting <code>envfrom2srs.py</code> and
+<code>srs2envtol.py</code> for the perl scripts.  Even simpler, use the
+supplied sendmail m4 hack with <code>sendmail.mc</code>.
+<li>SRS.Daemon.Daemon() provides a simple socket daemon suitable
+for use with the Exim mailer.
+<li>RPM now includes a sendmail socketmap daemon.  The program map is
+no longer recommended.  It is slow and a security risk.  Prior to socketmaps,
+it was all that was available for a custom map.  Socketmap is available
+in <a href="http://www.sendmail.org">sendmail 8.13</a>.
+<li>For best results, use with <a href="milter.html">Python milter</a>
+    to reject unsigned recipients.
+</ul>
+
+<h3> Sendmail integration </h3>
+
+Add the following lines to your /etc/mail/sendmail.mc (RedHat /
+Fedora) after any MAILER():
+<pre>
+dnl #
+dnl # File listing domains we do not SRS encode for when sending to
+dnl #
+define(`NO_SRS_FILE',`/etc/mail/no-srs-mailers')dnl
+dnl #
+dnl # Uncomment the following if you do not wish to SRS encode mail from
+dnl # local domains.  Only non-local domains need to be SRS encoded to
+dnl # satisfy SPF.  But encoding all outgoing mail can detect bounce forgeries.
+dnl #
+dnl define(`NO_SRS_FROM_LOCAL')dnl
+dnl #
+HACK(`pysrs',`/var/run/milter/pysrs')dnl
+</pre>
+
+If you cannot install a version of sendmail with socketmap support, then
+the original program map is still available as <code>HACK(pysrsprog)</code>.
+
+<ul>
+<li>       NO_SRS_FILE is the path of a file containing the recipient
+        MTA's for which you won't do SRS (typically, primary MXes for
+        which you are secondary). Just leave this away, if you are
+        secondary for nobody. The no-srs-mailers file is a simple text
+        file which has one recipient MTA per line.
+<li>       The argument to pysrs is the socket where the socketmap daemon
+	is listening.  This must match <code>/etc/mail/pysrs.cfg</code> or
+	the default of <code>/var/run/milter/pysrs</code>.
+<li>       NO_SRS_FROM_LOCAL : if this is set (define line present), then
+        no SRS is done if sender is local (i.e. his domain is in 
+        /etc/mail/local-host-names)
+<li>       The argument to pysrsprog is the domain that your SRS addresses bear
+	(i.e. if your SRS addresses are srs0=mumble-jumble-toto@mydomain.com,
+	then the argument is mydomain.com).  This overrides fwdomain in
+	/etc/mail/pysrs.cfg.
+</ul>
+
+<h3>Downloads</h3>
+
+Goto <a href="http://sourceforge.net/project/showfiles.php?group_id=139894&package_id=153866&release_id=435965">Sourceforge file release</a>.
+
+</body></html>
