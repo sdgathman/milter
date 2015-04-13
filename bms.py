@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.202  2014/03/22 19:15:03  customdesigned
+# Fix bandomain with no DKIM
+#
 # Revision 1.201  2014/03/01 05:19:08  customdesigned
 # Release 0.8.18-3
 #
@@ -406,6 +409,64 @@ class Config(object):
     self.log_headers = False
     ## Data directory, or '' to use logdir
     self.datadir = ''
+    ## Socket for talking to MTA as proto:address
+    # If proto is missing, it defaults to unix domain socket.
+    # Examples:
+    # <pre>
+    # 'unix:/var/run/pythonfilter'	Unix domain socket
+    # 'local:/var/run/pythonfilter'	named pipe
+    # 'inet:8800'			port 8800 on ANY IP4 interface
+    # 'inet:8800@hostname'		port 8800 on hostname
+    # 'inet6:8801'			port 8801 on ANY IP6 interface
+    # 'inet6:8802@[2001:db8:1234::1]'	port 8802 on IP6 interface
+    # </pre>
+    # See <a href="http://pythonhosted.org/pymilter/namespacemilter.html#a266a6e09897499d8b1ae0e20f0d2be73">milter.setconn()</a>
+    self.socketname = "/tmp/pythonsock"
+    ## Milter protocol timeout.
+    # If the MTA doesn't respond within this timeout, we assume something
+    # went wrong and abort the connection.  This is currently also used 
+    # when sending DSNs.
+    self.timeout = 600
+    ## True to continue until DATA when a REJECT decision is made.
+    # This allows logging intended recipients, which can be very useful.
+    self.delayed_reject = True
+    ## Set of domains to reject executables.
+    # Normally, executable attachments are sequestered where the mail
+    # admin can recover them if needed, and replaced
+    # with a notice.  For these MAIL FROM domains, the message is
+    # rejected instead.
+    self.reject_virus_from = ()
+    ## List of localparts by domain to wiretap.
+    # Wiretapping copies messages to another user or alias for 
+    # archiving or monitoring.
+    self.wiretap_users = {}
+    ## List of localparts by domain to silently discard.
+    # Allows an administrator to intercept instead of monitor mail
+    # from a suspect employee.  Approved emails can be redirected 
+    # to approved recipients.  Helps prevents "leaks" of confidential
+    # info like customer lists from unethical employees.
+    self.discard_users = {}
+    ## Address to send wiretapped emails to.
+    self.wiretap_dest = None
+    ## Filename to append all emails to.
+    self.mail_archive = None
+    ## Wiretap acts like Bcc: if True.
+    # When False, wiretap adds wiretap_dest to the Cc: header field.
+    self.blind_wiretap = True
+    ## Smart alias dictionary.
+    # A smart alias is matched on both sender and recipient, unlike
+    # traditional aliases, which match on the recipient only.
+    # The key is a sender,recipient tuple.  The values is a list of 
+    # recipients to replace the original recipient.
+    self.smart_alias = {}
+    ## True if smart alias local parts are case sensitive.
+    # The SMTP internet standard says the localpart is case sensitive.
+    # Maddeningly, Microsoft programmers routinely ignore the specification
+    # and convert local parts to upper case - end users have no way to
+    # enter correct emails.  If you want smart alias to match emails
+    # from the evil empire (and your mailboxes are not all upper case), you
+    # need to set this to false.
+    self.case_sensitive_localpart = False
 
   def getGreylist(self):
     if not self.greylist: return None
@@ -418,22 +479,13 @@ class Config(object):
     return greylist
 
 config = Config()
+_archive_lock = None
 
 # Global configuration defaults suitable for test framework.
-socketname = "/tmp/pythonsock"
-reject_virus_from = ()
-delayed_reject = True
-wiretap_users = {}
-discard_users = {}
-wiretap_dest = None
-mail_archive = None
-_archive_lock = None
-blind_wiretap = True
 check_user = {}
 block_forward = {}
 hide_path = ()
 block_chinese = False
-case_sensitive_localpart = False
 banned_exts = mime.extlist.split(',')
 scan_zip = False
 scan_html = True
@@ -445,7 +497,6 @@ private_relay = ()
 internal_mta = ()
 trusted_forwarder = ()
 internal_domains = ()
-smart_alias = {}
 dspam_dict = None
 dspam_users = {}
 dspam_train = {}
@@ -466,7 +517,6 @@ spf_accept_fail = ()
 spf_best_guess = False
 spf_reject_noptr = False
 supply_sender = False
-timeout = 600
 banned_ips = set()
 banned_domains = set()
 UNLIMITED = 0x7fffffff
@@ -520,11 +570,11 @@ def read_config(list):
 
   # milter section
   tempfile.tempdir = cp.get('milter','tempdir')
-  global socketname, timeout, check_user
+  global check_user
   global internal_connect, internal_domains, trusted_relay
-  global case_sensitive_localpart, private_relay, internal_mta, max_demerits
-  socketname = cp.get('milter','socket')
-  timeout = cp.getintdefault('milter','timeout',600)
+  global private_relay, internal_mta, max_demerits
+  config.socketname = cp.get('milter','socket')
+  config.timeout = cp.getintdefault('milter','timeout',600)
   check_user = cp.getaddrset('milter','check_user')
   config.log_headers = cp.getboolean('milter','log_headers')
   internal_connect = cp.getlist('milter','internal_connect')
@@ -533,7 +583,7 @@ def read_config(list):
   private_relay = cp.getlist('milter','private_relay')
   internal_mta = cp.getlist('milter','internal_mta')
   config.hello_blacklist = cp.getlist('milter','hello_blacklist')
-  case_sensitive_localpart = cp.getboolean('milter','case_sensitive_localpart')
+  config.case_sensitive_localpart = cp.getboolean('milter','case_sensitive_localpart')
   max_demerits = cp.getintdefault('milter','max_demerits',UNLIMITED)
   config.errors_url = cp.get('milter','errors_url')
   if cp.has_option('milter','email_providers'):
@@ -567,21 +617,19 @@ def read_config(list):
   config.from_words = from_words
 
   # scrub section
-  global hide_path, reject_virus_from, internal_policy
+  global hide_path, internal_policy
   hide_path = cp.getlist('scrub','hide_path')
-  reject_virus_from = cp.getlist('scrub','reject_virus_from')
+  config.reject_virus_from = cp.getlist('scrub','reject_virus_from')
   internal_policy = cp.getboolean('scrub','internal_policy')
 
   # wiretap section
-  global blind_wiretap,wiretap_users,wiretap_dest,discard_users,mail_archive
-  blind_wiretap = cp.getboolean('wiretap','blind')
-  wiretap_users = cp.getaddrset('wiretap','users')
-  discard_users = cp.getaddrset('wiretap','discard')
-  wiretap_dest = cp.getdefault('wiretap','dest')
-  if wiretap_dest: wiretap_dest = '<%s>' % wiretap_dest
-  mail_archive = cp.getdefault('wiretap','archive')
+  config.blind_wiretap = cp.getboolean('wiretap','blind')
+  config.wiretap_users = cp.getaddrset('wiretap','users')
+  config.discard_users = cp.getaddrset('wiretap','discard')
+  config.wiretap_dest = cp.getdefault('wiretap','dest')
+  if config.wiretap_dest: config.wiretap_dest = '<%s>' % config.wiretap_dest
+  config.mail_archive = cp.getdefault('wiretap','archive')
 
-  global smart_alias
   for sa,v in [
       (k,cp.get('wiretap',k)) for k in cp.getlist('wiretap','smart_alias')
     ] + (cp.has_section('smart_alias') and cp.items('smart_alias',True) or []):
@@ -591,11 +639,11 @@ def read_config(list):
       milter_log.warning('malformed smart alias: %s',sa)
       continue
     if len(sm) == 2: sm.append(sa)
-    if case_sensitive_localpart:
+    if config.case_sensitive_localpart:
       key = (sm[0],sm[1])
     else:
       key = (sm[0].lower(),sm[1].lower())
-    smart_alias[key] = sm[2:]
+    config.smart_alias[key] = sm[2:]
 
   # dspam section
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt, dspam_internal
@@ -866,8 +914,10 @@ class bmsMilter(Milter.Base):
     self.canon_from = None      # sender in end user form
     self.fp = None
     self.pristine_headers = None
+    self.enhanced_headers = None
     self.bodysize = 0
     self.id = Milter.uniqueID()
+    self.config = config	# get reference to current global config
 
   # delrcpt can only be called from eom().  This accumulates recipient
   # changes which can then be applied by alter_recipients()
@@ -886,6 +936,10 @@ class bmsMilter(Milter.Base):
   # addheader can only be called from eom().  This accumulates added headers
   # which can then be applied by alter_headers()
   def add_header(self,name,val,idx=-1):
+    if idx < 0:
+      self.enhanced_headers.append((name,val))
+    else:
+      self.enhanced_headers.insert(idx,(name,val))
     self.new_headers.append((name,val,idx))
     self.log('%s: %s' % (name,val))
 
@@ -902,7 +956,7 @@ class bmsMilter(Milter.Base):
         self.addheader(name,val)        # older sendmail can't insheader
 
   def delay_reject(self,*args,**kw):
-    if delayed_reject:
+    if self.config.delayed_reject:
       self.reject = (args,kw)
       return Milter.CONTINUE
     self.htmlreply(*args,**kw)
@@ -963,7 +1017,7 @@ class bmsMilter(Milter.Base):
         self.log("REJECT: numeric hello name:",hostname)
         self.setreply('550','5.7.1','hello name cannot be numeric ip')
         return Milter.REJECT
-      if hostname in config.hello_blacklist:
+      if hostname in self.config.hello_blacklist:
         self.log("REJECT: spam from self:",hostname)
         self.setreply('550','5.7.1',
           'Your mail server lies.  Its name is *not* %s.' % hostname)
@@ -980,8 +1034,9 @@ class bmsMilter(Milter.Base):
     return Milter.CONTINUE
 
   def smart_alias(self,to):
+    smart_alias = self.config.smart_alias
     if smart_alias:
-      if case_sensitive_localpart:
+      if self.config.case_sensitive_localpart:
         t = parse_addr(to)
       else:
         t = parse_addr(to.lower())
@@ -989,7 +1044,7 @@ class bmsMilter(Milter.Base):
         ct = '@'.join(t)
       else:
         ct = t[0]
-      if case_sensitive_localpart:
+      if self.config.case_sensitive_localpart:
         cf = self.efrom
       else:
         cf = self.efrom.lower()
@@ -1028,6 +1083,7 @@ class bmsMilter(Milter.Base):
     #self.mail_param = param
     self.fp = StringIO.StringIO()
     self.pristine_headers = StringIO.StringIO()
+    self.enhanced_headers = []
     if self.tempname:
       os.remove(self.tempname)  # remove any leftover from previous message
     self.tempname = None
@@ -1060,6 +1116,7 @@ class bmsMilter(Milter.Base):
     self.has_dkim = False
     self.dkim_domain = None
     self.arresults = []
+    config = self.config
     if f == '<>' and internal_mta and self.internal_connection:
       if not iniplist(self.connectip,internal_mta):
         self.log("REJECT: pretend MTA at ",self.connectip,
@@ -1181,11 +1238,11 @@ class bmsMilter(Milter.Base):
         if user in wl_users or '' in wl_users:
           self.whitelist_sender = True
           
-      self.rejectvirus = domain in reject_virus_from
-      if user in wiretap_users.get(domain,()):
-        self.add_recipient(wiretap_dest)
-        self.smart_alias(wiretap_dest)
-      if user in discard_users.get(domain,()):
+      self.rejectvirus = domain in config.reject_virus_from
+      if user in config.wiretap_users.get(domain,()):
+        self.add_recipient(config.wiretap_dest)
+        self.smart_alias(config.wiretap_dest)
+      if user in config.discard_users.get(domain,()):
         self.discard = True
       exempt_users = dspam_whitelist.get(domain,())
       if user in exempt_users or '' in exempt_users:
@@ -1281,7 +1338,7 @@ class bmsMilter(Milter.Base):
         qual = res
       try:
         umis = gossip.umis(domain+qual,self.id+time.time())
-        res = gossip_node.query(umis,domain,qual,1)
+        res = gossip_node.query(umis,domain,qual,gossip_ttl)
         if res:
           res,hdr,val = res
           self.add_header(hdr,val)
@@ -1414,7 +1471,7 @@ class bmsMilter(Milter.Base):
         # A proper SPF fail error message would read:
         # forger.biz [1.2.3.4] is not allowed to send mail with the domain
         # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
-        if q.d in config.hello_blacklist:
+        if q.d in self.config.hello_blacklist:
           self.offense(inc=4)
         return self.delay_reject(str(code),'5.7.1',txt)
     elif res == 'softfail':
@@ -1577,10 +1634,10 @@ class bmsMilter(Milter.Base):
     except:
       self.log("rcpt to",to,str)
       raise
-    if self.greylist and config.greylist \
+    if self.greylist and self.config.greylist \
 	and self.canon_from and not self.reject:
       # no policy for trusted or internal
-      greylist = config.getGreylist()
+      greylist = self.config.getGreylist()
       if self.spf and self.spf_guess == 'pass':
         ip = self.spf.d
       else:
@@ -1603,6 +1660,7 @@ class bmsMilter(Milter.Base):
 
   # Heuristic checks for spam headers
   def check_header(self,name,val):
+    config = self.config
     lname = name.lower()
     # val is decoded header value
     if lname == 'subject':
@@ -1720,7 +1778,7 @@ class bmsMilter(Milter.Base):
       domain = self.dkim_domain
     else:
       return Milter.REJECT
-    if domain in config.email_providers:
+    if domain in self.config.email_providers:
       sender = self.spf.s
       blacklist[sender] = None
       self.greylist = False   # don't delay - use spam for training
@@ -1775,7 +1833,7 @@ class bmsMilter(Milter.Base):
           self.log('AUTOREPLY: not whitelisted')
 
     # log selected headers
-    if config.log_headers or lname in ('subject','x-mailer','from'):
+    if self.config.log_headers or lname in ('subject','x-mailer','from'):
       self.log('%s: %s' % (name,val))
     elif self.trust_received and lname == 'received':
       self.trust_received = False
@@ -1792,16 +1850,37 @@ class bmsMilter(Milter.Base):
       self.trust_dkim = False
       self.external_dkim = val
       self.log('%s: %s' % (name,val.splitlines()[0]))
-    # FIXME: keep both decoded and pristine headers.  DKIM needs
-    # pristine headers.
+    # Keep both decoded and pristine headers.  DKIM needs pristine headers.
     if self.fp:
       try:
         val = val.encode('iso-8859-1')
       except:
         val = hval
       self.fp.write("%s: %s\n" % (name,val))    # add decoded header to buffer
+      self.enhanced_headers.append((name,val))
       self.pristine_headers.write("%s: %s\n" % (name,hval))
     return Milter.CONTINUE
+
+  ## Get email text exactly as it came from the MTA.
+  # For spam checking, we decode headers that don't actually need
+  # encoding, since spammers use this to obfuscate their message.
+  # DKIM on the other hand, needs pristine headers to compute the message hash.
+  def get_pristine_txt(self):
+    self.fp.seek(self.body_start)
+    return self.pristine_headers.getvalue()+'\n'+self.fp.read()
+
+  ## Get email text with original headers unobfuscated.
+  def get_decoded_txt(self):
+    self.fp.seek(0)
+    return self.fp.read()
+
+  ## Get email text with unobfuscated and additional headers.
+  # We add headers for authentication and SPF results, which should
+  # be included when spam checking for enhanced accuracy.
+  def get_enhanced_txt(self):
+    s = ''.join('%s: %s\n' % (name,val) for name,val in self.enhanced_headers)
+    self.fp.seek(self.body_start)
+    return s+'\n'+self.fp.read()
 
   def eoh(self):
     if not self.fp: return Milter.TEMPFAIL      # not seen by envfrom
@@ -1851,18 +1930,15 @@ class bmsMilter(Milter.Base):
     self.fp.write(headers)      # IOError (e.g. disk full) causes TEMPFAIL
     self.body_start = self.fp.tell()
     # check if headers are really spammy
-    if dspam_dict and not self.internal_connection:
-      ds = dspam.dspam(dspam_dict,dspam.DSM_PROCESS,
-        dspam.DSF_CHAINED|dspam.DSF_CLASSIFY)
-      try:
+    if dspam_dict and not self.internal_connection and dspam_dict.index('/')<0:
+      ds = Dspam.DSpamDirectory(dspam_userdir)
+      with ds.dspam_ctx(dspam.DSM_CLASSIFY) as ds:
         ds.process(headers)
         if ds.probability > 0.93 and self.dspam and not self.whitelist:
           self.log('REJECT: X-DSpam-HeaderScore: %f' % ds.probability)
           self.setreply('550','5.7.1','Your Message looks spammy')
           return Milter.REJECT
         self.add_header('X-DSpam-HeaderScore','%f'%ds.probability)
-      finally:
-        ds.destroy()
     self.ioerr = None
     return Milter.CONTINUE
 
@@ -1921,6 +1997,7 @@ class bmsMilter(Milter.Base):
       if rcpt in redirect_list: continue
       self.log("DISCARD RCPT: %s" % rcpt)       # log discarded rcpt
       self.delrcpt(rcpt)
+    blind_wiretap = self.config.blind_wiretap
     for rcpt in redirect_list:
       if rcpt in discard_list: continue
       self.log("APPEND RCPT: %s" % rcpt)        # log appended rcpt
@@ -1942,6 +2019,7 @@ class bmsMilter(Milter.Base):
         self.create_gossip(domain,self.spf_guess,self.spf_helo)
 
   def sign_dkim(self):
+    config = self.config
     if self.canon_from:
       a = self.canon_from.split('@')
       if len(a) != 2:
@@ -1950,8 +2028,7 @@ class bmsMilter(Milter.Base):
     elif config.dkim_domain:
       domain = config.dkim_domain
     if config.dkim_key and domain == config.dkim_domain:
-      self.fp.seek(self.body_start)
-      txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
+      txt = self.get_pristine_txt()
       try:
         d = dkim.DKIM(txt,logger=milter_log)
         h = d.sign(config.dkim_selector,domain,config.dkim_key,
@@ -1964,8 +2041,7 @@ class bmsMilter(Milter.Base):
         milter_log.error("sign_dkim: %s",x,exc_info=True)
       
   def check_dkim(self):
-      self.fp.seek(self.body_start)
-      txt = self.pristine_headers.getvalue()+'\n'+self.fp.read()
+      txt = self.get_pristine_txt()
       res = False
       result = 'fail'
       d = dkim.DKIM(txt,logger=milter_log,minkey=768)
@@ -2017,8 +2093,7 @@ class bmsMilter(Milter.Base):
         user = dspam_users.get(rcpt.lower())
         if user:
           try:
-            self.fp.seek(0)
-            txt = self.fp.read()
+            txt = self.get_enhanced_txt()
             if user in ('bandom','spam','falsepositive') \
                 and self.internal_connection:
               if spf and self.external_spf:
@@ -2042,8 +2117,7 @@ class bmsMilter(Milter.Base):
               if self.spf:
                 if self.spf_guess == 'pass' or q.result == 'none' \
 			or self.spf.o == self.dkim_domain \
-			or (self.dkim_domain and 
-				self.dkim_domain in config.email_providers):
+			or self.dkim_domain in self.config.email_providers:
                   self.confidence = 0	# ban regardless of reputation status
                   s = rcpt.split('@')[0][-1]
                   self.bandomain(wild=s.isdigit() and int(s))
@@ -2134,8 +2208,7 @@ class bmsMilter(Milter.Base):
     # screen if no recipients are dspam_users
     if not modified and dspam_screener and not self.internal_connection \
         and self.dspam:
-      self.fp.seek(0)
-      txt = self.fp.read()
+      txt = self.get_enhanced_txt()
       if len(txt) > dspam_sizelimit:
         self.log("Large message:",len(txt))
         return False
@@ -2202,8 +2275,7 @@ class bmsMilter(Milter.Base):
     if not dspam_screener: return
     ds = Dspam.DSpamDirectory(dspam_userdir)
     ds.log = self.log
-    self.fp.seek(0)
-    txt = self.fp.read()
+    txt = self.get_enhanced_txt()
     if len(txt) > dspam_sizelimit:
       self.log("Large message:",len(txt))
       return
@@ -2250,6 +2322,7 @@ class bmsMilter(Milter.Base):
     return whitelisted
 
   def eom(self):
+    config = self.config
     if self.ioerr:
       fname = tempfile.mktemp(".ioerr")  # save message that caused crash
       os.rename(self.tempname,fname)
@@ -2409,7 +2482,7 @@ class bmsMilter(Milter.Base):
       if rc != Milter.CONTINUE:
         return rc
 
-    if mail_archive:
+    if config.mail_archive:
       global _archive_lock
       if not _archive_lock:
         import thread
@@ -2417,7 +2490,7 @@ class bmsMilter(Milter.Base):
       _archive_lock.acquire()
       try:
         fin = open(self.tempname,'r')
-        fout = open(mail_archive,'a')
+        fout = open(config.mail_archive,'a')
         shutil.copyfileobj(fin,fout,8192)
       finally:
         _archive_lock.release()
@@ -2485,7 +2558,7 @@ class bmsMilter(Milter.Base):
     if 'template' in kw:
       template = kw['template']
       del kw['template']
-      desc = "%s/%s?%s" % (config.errors_url,template,urllib.urlencode(kw))
+      desc = "%s/%s?%s" % (self.config.errors_url,template,urllib.urlencode(kw))
       self.setreply(code,xcode,desc.replace('%','%%'),*msg)
     else:
       try:
@@ -2509,7 +2582,7 @@ class bmsMilter(Milter.Base):
     else:
       m = None
       if template_name:
-        fname = os.path.join(config.datadir,template_name+'.txt')
+        fname = os.path.join(self.config.datadir,template_name+'.txt')
         try:
           template = file(fname).read()  # from datadir
           m = dsn.create_msg(q,self.recipients,msg,template)
@@ -2532,7 +2605,7 @@ class bmsMilter(Milter.Base):
         m = m.as_string()
         print >>open(template_name+'.last_dsn','w'),m
       # if missing template, do plain CBV
-      res = dsn.send_dsn(sender,self.receiver,m,timeout=timeout)
+      res = dsn.send_dsn(sender,self.receiver,m,timeout=self.config.timeout)
     if res:
       desc = "CBV: %d %s" % res[:2]
       if 400 <= res[0] < 500:
@@ -2610,14 +2683,15 @@ def main():
 
   Milter.factory = bmsMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS
-  if wiretap_dest or smart_alias or dspam_userdir:
+  if config.wiretap_dest or config.smart_alias or dspam_userdir:
     flags = flags + Milter.ADDRCPT
-  if srs or len(discard_users) > 0 or smart_alias or dspam_userdir:
+  if srs or len(config.discard_users) > 0 \
+  	or config.smart_alias or dspam_userdir:
     flags = flags + Milter.DELRCPT
   Milter.set_flags(flags)
   socket.setdefaulttimeout(60)
   milter_log.info("bms milter startup")
-  Milter.runmilter("pythonfilter",socketname,timeout)
+  Milter.runmilter("pythonfilter",config.socketname,config.timeout)
   milter_log.info("bms milter shutdown")
   # force dereference of local data structures before shutdown
   getattr(local, 'whatever', None)
