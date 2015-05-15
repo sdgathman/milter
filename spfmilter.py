@@ -27,7 +27,9 @@ class Config(object):
 
 def read_config(list):
   "Return new config object."
-  cp = MilterConfigParser()
+  cp = MilterConfigParser({
+    'access_file_nulls': 'no'
+  })
   cp.read(list)
   if cp.has_option('milter','datadir'):
         os.chdir(cp.get('milter','datadir'))
@@ -43,16 +45,21 @@ def read_config(list):
   else: # backward compatibility with config typo
     conf.trusted_forwarder = cp.getlist('spf','trusted_relay')
   conf.access_file = cp.getdefault('spf','access_file',None)
+  conf.access_file_nulls = cp.getboolean('spf','access_file_nulls',None)
   return conf
 
 class SPFPolicy(object):
   "Get SPF policy by result from sendmail style access file."
-  def __init__(self,sender,access_file=None):
+  def __init__(self,sender,access_file=None,use_nulls=False):
+    self.use_nulls = use_nulls
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
     if access_file:
-      try: acf = anydbm.open(access_file,'r')
-      except: acf = None
+      try:
+        acf = anydbm.open(access_file,'r')
+      except:
+	syslog.syslog('%s: Cannot open for reading'%access_file)
+	acf = None
     else: acf = None
     self.acf = acf
 
@@ -65,16 +72,21 @@ class SPFPolicy(object):
   def getPolicy(self,pfx):
     acf = self.acf
     if not acf: return None
+    if self.use_nulls: sfx = '\x00'
+    else: sfx = ''
     try:
-      return acf[pfx + self.sender]
+      return acf[pfx + self.sender + sfx].rstrip('\x00')
     except KeyError:
       try:
-        return acf[pfx + self.domain]
+        return acf[pfx + self.domain + sfx].rstrip('\x00')
       except KeyError:
         try:
-          return acf[pfx]
+          return acf[pfx + sfx].rstrip('\x00')
         except KeyError:
-          return None
+	  try:
+	    return acf[pfx.rstrip(':') + sfx].rstrip('\x00')
+	  except KeyError:
+	    return None
   
 class spfMilter(Milter.Base):
   "Milter to check SPF.  Each connection gets its own instance."
@@ -295,7 +307,8 @@ if __name__ == "__main__":
   Milter.factory = spfMilter
   Milter.set_flags(Milter.CHGHDRS + Milter.ADDHDRS)
   global config
-  config = read_config(['spfmilter.cfg','/etc/mail/spfmilter.cfg'])
+  config = read_config(
+    ['spfmilter.cfg','/etc/mail/spfmilter.cfg','/etc/postfix/spfmilter.cfg'])
   ue = config.untrapped_exception.upper()
   if ue == 'CONTINUE':
     Milter.set_exception_policy(Milter.CONTINUE)
