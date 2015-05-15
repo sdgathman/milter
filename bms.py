@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.203  2015/04/13 03:29:37  customdesigned
+# Move more config variables to Config object.  Include added headers
+# in check_spam and quarantine.  Update header triage for pydspam-1.3.
+#
 # Revision 1.202  2014/03/22 19:15:03  customdesigned
 # Fix bandomain with no DKIM
 #
@@ -790,9 +794,13 @@ class SPFPolicy(object):
   def __init__(self,sender):
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
-    if config.access_file:
-      try: acf = anydbm.open(config.access_file,'r')
-      except: acf = None
+    access_file = config.access_file
+    if access_file:
+      try:
+        acf = anydbm.open(access_file,'r')
+      except Exception as x:
+        acf = None
+        milter_log.error("%s: %%s"%access_file,x,exc_info=True)
     else: acf = None
     self.acf = acf
 
@@ -1034,9 +1042,10 @@ class bmsMilter(Milter.Base):
     return Milter.CONTINUE
 
   def smart_alias(self,to):
-    smart_alias = self.config.smart_alias
+    config = self.config
+    smart_alias = config.smart_alias
     if smart_alias:
-      if self.config.case_sensitive_localpart:
+      if config.case_sensitive_localpart:
         t = parse_addr(to)
       else:
         t = parse_addr(to.lower())
@@ -1044,7 +1053,7 @@ class bmsMilter(Milter.Base):
         ct = '@'.join(t)
       else:
         ct = t[0]
-      if self.config.case_sensitive_localpart:
+      if config.case_sensitive_localpart:
         cf = self.efrom
       else:
         cf = self.efrom.lower()
@@ -1211,7 +1220,9 @@ class bmsMilter(Milter.Base):
           if self.trusted_relay or self.localhost:
             policy = 'OK'
         if policy:
-          if policy != 'OK':
+	  if policy == 'WHITELIST':
+	    self.whitelist = True
+          elif policy != 'OK':
             self.log("REJECT: unauthorized user",self.user,
                 "at",self.connectip,"sending MAIL FROM",self.canon_from)
             self.setreply('550','5.7.1',
@@ -2358,7 +2369,7 @@ class bmsMilter(Milter.Base):
       
       if not self.internal_connection and self.has_dkim:
         res = self.check_dkim()
-        if self.dkim_domain:
+        if self.dkim_domain and not self.whitelist:
           p = SPFPolicy(self.dkim_domain)
           policy = p.getPolicy('dkim-%s:'%res)
           p.close()
