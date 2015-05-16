@@ -16,8 +16,8 @@
 Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Version: 0.8.18
-Release: 4%{dist}.py26
+Version: 0.9
+Release: 1%{dist}.py26
 Source: milter-%{version}.tar.gz
 Patch: %{name}-%{version}.patch
 License: GPLv2+
@@ -29,6 +29,7 @@ Url: http://www.bmsi.com/python/milter.html
 Requires: %{pythonbase} >= 2.6.5, %{pythonbase}-pyspf >= 2.0.6, daemonize
 Requires: %{pythonbase}-pymilter >= 0.9.8, %{pythonbase}-pydns >= 2.3.5
 Conflicts: %{pythonbase}-pydkim < 0.5.3
+Conflicts: pydspam < 1.3
 %ifos Linux
 Requires: chkconfig
 %endif

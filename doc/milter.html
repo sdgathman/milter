@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <!-- THIS PAGE IS AUTOMATICALLY GENERATED.  DO NOT EDIT. -->
-<!-- Wed Apr 17 15:58:32 2013 -->
+<!-- Thu May 14 22:09:11 2015 -->
 <!-- USING HT2HTML 2.0 -->
 <!-- SEE http://ht2html.sf.net -->
 <!-- User-specified headers:
@@ -134,7 +134,7 @@ Email Us
 <!-- start of body cell -->
 <td valign="top" width="90%" class="body"><br>
 <!-- This is part of the Python Milter Applications documentation.
- Copyright (C) 2001,2002,2003,2004,2005-2011 Business Management Systems, Inc.
+ Copyright (C) 2001,2002,2003,2004,2005-2014 Business Management Systems, Inc.
  See the file license.ht for copying conditions.  -->
 
 <P ALIGN="CENTER"><A HREF="http://www.anybrowser.org/campaign/">
@@ -146,19 +146,19 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
 <map name="banner_4">
   <area shape="rect" coords="330,25,426,59"
   	href="http://www.schoolandstate.org/Knowledge/Drennan/SchoolWars.htm" alt="I Disagree">
-  <area shape="rect" coords="234,28,304,57" href="http://www.honestEd.com/" alt="I Agree">
+  <area shape="rect" coords="234,28,304,57" href="http://www.schoolandstate.org" alt="I Agree">
 </map>
 </P>
 
 <h1 align=center>Sendmail/Postfix Milters in Python</h1>
 <h4 align=center>by <a href="mailto:%75%72%6D%61%6E%65%40%6E%65%75%72%61l%61%63%63%65%73%73%2E%63%6F%6D">Jim Niemira</a>
-  and <a href="mailto:%73%74%75%61%72%74%40%62%6D%73%69%2E%63%6F%6D">
+  and <a href="mailto:stuart@gathman.org">
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
 (see <a href="license.html">LICENSE</a> for copying permissions for this
 documentation)<br>
-Last updated Mar 21, 2013</h4>
+Last updated May 1, 2014</h4>
 <table rules="none">
 <tr><td>
 <img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
@@ -168,9 +168,7 @@ Mascot by students of <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian
 
 See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
 <a href="#support">Support</a> |
-<a href="#overview">Overview</a> |
-<a href="//bmsi.com/python/dspam.html">pydspam</a> |
-<a href="//bmsi.com/libdspam/dspam.html">libdspam</a>
+<a href="#overview">Overview</a> 
 <p>
 <a href="//www.sendmail.org/">Sendmail</a> introduced a
 <a href="https://www.milter.org/developers/api/index"> new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.
@@ -199,6 +197,23 @@ for Postfix in Python.
 <h3> What's New </h3>
 
 <ul>
+<li> pymilter 1.0 removes the start.sh glue script.  EL6 RPMs for packages
+using pymilter (milter,pysrs,pygossip) now use daemonize as a replacement.
+ACCEPT is supported as an untrapped exception policy.  An optional dir for
+getaddrset and getaddrdict in Milter.config supports moving some clutter.
+Untrapped exceptions now report the registered milter name.  An selinux
+subpackage is include for EL6.  Provide sqlite support for greylisting, and
+Milter.greylist export and Milter.greysql import to migrate data.
+
+<li> pyspf 2.0.9 adds a new test suite and support for RFC 7208, the
+official (non-experimental) RFC for SPF.
+<li> pyspf 2.0.8 adds much improved python3 support.  All test suites
+now pass with python3 and py3dns.  SPF records are restricted to 7-bit
+ascii.  But some people try to use an extended set anyway, crashing 
+pyspf.  We now return PermError for non-ascii SPF records.  IP address
+parsing and arithmetic is now handled by the ipaddr (ipaddress in python3)
+module.  I fixed a bug caused by a null CNAME in cache.
+
 <li> milter 0.8.18 adds test cases and SMTP AUTH policies in sendmail access
 for spf-milter.  You can now also configure an untrapped exception
 policy for spf-milter, and it rejects numeric HELO.  For the bms milter,

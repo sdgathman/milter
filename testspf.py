@@ -52,6 +52,7 @@ class TestMilter(TestBase,spfmilter.spfMilter):
     TestBase.__init__(self)
     spfmilter.config = spfmilter.Config()
     spfmilter.config.access_file = 'test/access.db'
+    spfmilter.config.access_file_nulls = False
     spfmilter.spfMilter.__init__(self)
     #self.setsymval('j','test.milter.org')
 

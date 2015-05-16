@@ -50,8 +50,15 @@ def read_config(list):
 
 class SPFPolicy(object):
   "Get SPF policy by result from sendmail style access file."
-  def __init__(self,sender,access_file=None,use_nulls=False):
-    self.use_nulls = use_nulls
+  def __init__(self,sender,conf=None,access_file=None):
+    if conf:
+      conf = config
+    if not access_file:
+      access_file = conf.access_file
+    if conf: 
+      self.use_nulls = conf.access_file_nulls
+    else:
+      self.use_nulls = False
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
     if access_file:
@@ -183,7 +190,7 @@ class spfMilter(Milter.Base):
       )
       # Restrict SMTP AUTH users to authorized domains
       authsend = '@'.join((self.user,domain))
-      with SPFPolicy(authsend,access_file=self.conf.access_file) as p:
+      with SPFPolicy(authsend,self.conf) as p:
         policy = p.getPolicy('smtp-auth:')
       if policy:
         if policy != 'OK':
@@ -227,7 +234,7 @@ class spfMilter(Milter.Base):
 	# check hello name via spf unless spf pass
         h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
         hres,hcode,htxt = h.check()
-        with SPFPolicy(self.hello_name,self.conf.access_file) as hp:
+        with SPFPolicy(self.hello_name,self.conf) as hp:
           policy = hp.getPolicy('helo-%s:'%hres)
           #print 'helo-%s:%s %s'%(hres,self.hello_name,policy)
           if not policy:
@@ -248,7 +255,7 @@ class spfMilter(Milter.Base):
         hres,hcode,htxt = res,code,txt
     else: hres = None
 
-    with SPFPolicy(q.s,self.conf.access_file) as p:
+    with SPFPolicy(q.s,self.conf) as p:
       if res == 'fail':
         policy = p.getPolicy('spf-fail:')
         if not policy or policy == 'REJECT':

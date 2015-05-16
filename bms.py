@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.204  2015/05/15 02:08:43  customdesigned
+# Log error opening access file.  Support WHITELIST for SMTP-Auth.
+#
 # Revision 1.203  2015/04/13 03:29:37  customdesigned
 # Move more config variables to Config object.  Include added headers
 # in check_spam and quarantine.  Update header triage for pydspam-1.3.
@@ -285,7 +288,7 @@
 # See ChangeLog
 #
 # Author: Stuart D. Gathman <stuart@bmsi.com>
-# Copyright 2001,2002,2003,2004,2005-2010 Business Management Systems, Inc.
+# Copyright 2001,2002,2003,2004,2005-2015 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
 import sys
