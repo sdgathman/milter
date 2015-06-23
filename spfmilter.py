@@ -45,7 +45,7 @@ def read_config(list):
   else: # backward compatibility with config typo
     conf.trusted_forwarder = cp.getlist('spf','trusted_relay')
   conf.access_file = cp.getdefault('spf','access_file',None)
-  conf.access_file_nulls = cp.getboolean('spf','access_file_nulls',None)
+  conf.access_file_nulls = cp.getboolean('spf','access_file_nulls')
   return conf
 
 class SPFPolicy(object):
