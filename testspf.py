@@ -50,9 +50,7 @@ spf.DNSLookup = DNSLookup
 class TestMilter(TestBase,spfmilter.spfMilter):
   def __init__(self):
     TestBase.__init__(self)
-    spfmilter.config = spfmilter.Config()
-    spfmilter.config.access_file = 'test/access.db'
-    spfmilter.config.access_file_nulls = False
+    spfmilter.config = spfmilter.read_config(['test/spfmilter.cfg'])
     spfmilter.spfMilter.__init__(self)
     #self.setsymval('j','test.milter.org')
 
@@ -75,6 +73,8 @@ zonedata = {
 }
 
 class SPFMilterTestCase(unittest.TestCase):
+
+  # FIXME: call read_config() with test config to test parsing.
 
   def testPolicy(self):
     p = spfmilter.SPFPolicy('good@example.com',access_file='test/access.db')
@@ -198,6 +198,9 @@ class SPFMilterTestCase(unittest.TestCase):
     rc = milter.feedMsg('test1',sender='good')
     self.assertEqual(rc,Milter.REJECT)
     milter.close()
+
+  def testUmask(self):
+    self.assertEqual(spfmilter.config.umask,0117)
 
 def suite(): 
   s = unittest.makeSuite(SPFMilterTestCase,'test')

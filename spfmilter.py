@@ -8,6 +8,7 @@
 # This code is under GPL.  See COPYING for details.
 
 import sys
+import os
 import Milter
 import spf
 import syslog
@@ -24,6 +25,7 @@ class Config(object):
     self.trusted_relay = ()
     self.trusted_forwarder = ()
     self.access_file = None
+    #os.umask(config.savumask)
 
 def read_config(list):
   "Return new config object."
@@ -40,6 +42,8 @@ def read_config(list):
   conf.internal_connect = cp.getlist('milter','internal_connect')
   conf.untrapped_exception = cp.getdefault('milter','untrapped_exception',
         'CONTINUE')
+  conf.umask = int(cp.getdefault('milter','umask',default='0177'),base=0)
+  # SPF options
   if cp.has_option('spf','trusted_forwarder'):
     conf.trusted_forwarder = cp.getlist('spf','trusted_forwarder')
   else: # backward compatibility with config typo
@@ -328,6 +332,7 @@ if __name__ == "__main__":
 
   miltername = config.miltername
   socketname = config.socketname
+  # FIXME: set process umask based on config
   print("""To use this with sendmail, add the following to sendmail.cf:
 
 O InputMailFilters=%s
@@ -336,5 +341,6 @@ X%s,        S=local:%s
 See the sendmail README for libmilter.
 spfmilter startup""" % (miltername,miltername,socketname))
   sys.stdout.flush()
+  config.savumask = os.umask(config.umask)
   Milter.runmilter(miltername,socketname,240)
   print "spfmilter shutdown"
