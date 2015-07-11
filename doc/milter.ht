@@ -40,7 +40,7 @@ See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/sho
 <a href="#overview">Overview</a> 
 <p>
 <a href="//www.sendmail.org/">Sendmail</a> introduced a
-<a href="https://www.milter.org/developers/api/index"> new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.
+<a href="http://pythonhosted.org/pymilter/milter_api/index.html">new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.
 Version 8.12 seems to be more robust, and includes new privilege
 separation features to enhance security.  Even better, sendmail 8.13
 supports socket maps, which makes <a href="pysrs.html">pysrs</a> much more
@@ -161,7 +161,7 @@ haven't gotten things updated yet.  Another content filter might be in order.
 </ul>
 <p>
 At the lowest level, the <code>milter</code> module provides a thin wrapper around the
-<a href="https://www.milter.org/developers/api/index">
+<a href="http://pythonhosted.org/pymilter/milter_api/index.html">
 sendmail libmilter API</a>.  This API lets you register callbacks for 
 a number of events in the
 <a href="http://www.cs.concordia.ca/~group/fig/public/email/relay/milter+ruleset-checks.html">process of sendmail receiving a message via SMTP</a>.  
@@ -228,10 +228,11 @@ Windows.
 <li> A milter scans outgoing as well as incoming mail.
 <li> A milter can add and delete recipients to forward or secretly
 copy mail.
-<li> For more ideas, check the <a href="//www.milter.org">Milter Web Page</a>.
+<li> For more ideas, look at some of the milters linked at the
+<a href="http://pythonhosted.org/pymilter/">PyMilter Main Page</a>.
 </menu>
 
-<a href="https://www.milter.org/developers/api/index">
+<a href="http://pythonhosted.org/pymilter/milter_api/index.html">
 Documentation for the C API</a> is provided with sendmail.  
 <a href="http://pythonhosted.org/pymilter/">Documentation for
 pymilter</a> is provided via Doxygen.  Miltermodule provides a thin python
@@ -263,9 +264,6 @@ will be looking at plugging mailchecker into a milter.
 <a href="http://software.libertine.org/tmda/">TMDA</a> is a Python project
 to require confirmation the first time someone tries to send to your
 mailbox.  This would be a nice feature to have in a milter.
-<p>
-There is also a <a href="http://www.milter.org/">Milter community website</a>
-where milter software and gory details of the API are discussed.
 
 <h3> Is a milter written in python efficient? </h3>
 

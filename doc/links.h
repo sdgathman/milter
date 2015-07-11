@@ -16,8 +16,7 @@
 <li><a href="license.html">LICENSE</a>
 <li><a href="http://sourceforge.net"><img src="sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
 <h3>Links</h3>
-<li><a href="https://www.milter.org/developers/api/index">C&nbsp;API</a>
-<li><a href="http://www.milter.org/">Milter.Org</a>
+<li><a href="http://pythonhosted.org/pymilter/milter_api/index.html">C&nbsp;API</a>
 <li><a href="http://www.python.org/">Python.Org</a>
 <li><a href="http://www.sendmail.org/">Sendmail.Org</a>
 <li><a href="http://www.openspf.net/">SPF</a>
