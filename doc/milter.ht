@@ -8,10 +8,10 @@ Author-Email: stuart@gathman.org
  See the file license.ht for copying conditions.  -->
 
 <P ALIGN="CENTER"><A HREF="http://www.anybrowser.org/campaign/">
-<IMG SRC="http://bmsi.com/art/brain1.gif"
+<IMG SRC="/art/brain1.gif"
 ALT="Viewable With Any Browser" BORDER="0"></A>
 
-<img src="http://bmsi.com/art/banner_4.gif" width="468" height="60" border="0"
+<img src="/art/banner_4.gif" width="468" height="60" border="0"
 	usemap="#banner_4" alt="Your vote?">
 <map name="banner_4">
   <area shape="rect" coords="330,25,426,59"
@@ -57,7 +57,7 @@ Pymilter provides a milter module for <a href="//www.python.org">Python</a>
 that implements a python interface to libmilter exploiting all its features.
 </td></table>
 <a href="http://www.postfix.org">
-<img src="postfix-logo.jpg" align=left alt="A Postmark"> </a>
+<img src="/art/postfix-logo.jpg" align=left alt="A Postmark"> </a>
 Now <a href="http://www.postfix.org">Postfix</a> also implements the
 milter protocol, and you can program
 <a href="http://www.postfix.org/MILTER_README.html">SMTP time filters</a>
@@ -357,5 +357,5 @@ easy once the configuration is designed.
 <hr>
 <p>
 <a href="http://validator.w3.org/check/referer">
-<img border=0 src="vh32.png" alt=" [ Valid HTML 3.2! ] " height=31 width=88></a>
+<img border=0 src="/art/vh32.png" alt=" [ Valid HTML 3.2! ] " height=31 width=88></a>
 </p>
