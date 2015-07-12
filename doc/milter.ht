@@ -3,7 +3,8 @@ Author: Stuart D. Gathman
 Author-Email: stuart@gathman.org
 
 <!-- This is part of the Python Milter Applications documentation.
- Copyright (C) 2001,2002,2003,2004,2005-2014 Business Management Systems, Inc.
+ Copyright (C) 2001,2002,2003,2004,2005-2013 Business Management Systems, Inc.
+ Copyright (C) 2013-2015 Stuart D. Gathman
  See the file license.ht for copying conditions.  -->
 
 <P ALIGN="CENTER"><A HREF="http://www.anybrowser.org/campaign/">
@@ -23,11 +24,11 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
 <h4 align=center>by <a href="mailto:%75%72%6D%61%6E%65%40%6E%65%75%72%61l%61%63%63%65%73%73%2E%63%6F%6D">Jim Niemira</a>
   and <a href="mailto:stuart@gathman.org">
   Stuart D. Gathman</a><br>
-This web page is written by Stuart D. Gathman<br>and<br>sponsored by
+This web page is written by Stuart D. Gathman<br>and<br> originally sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
 (see <a href="license.html">LICENSE</a> for copying permissions for this
 documentation)<br>
-Last updated May 1, 2014</h4>
+Last updated Jul 11, 2015</h4>
 <table rules="none">
 <tr><td>
 <img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
@@ -131,8 +132,9 @@ shedding modules which can be used by other packages.
 <ul>
 <li> The <a href="http://pythonhosted.org/pymilter/">pymilter</a> package provides a robust toolkit for Python <a
 href="#milter">milters</a> that wraps the C libmilter library.  There
-is also a <a href="http://code.google.com/p/ppymilter/">
-pure Python milter library</a> that implements the milter protocol in Python.
+are also <a href="http://code.google.com/p/ppymilter/">several</a>
+<a href="https://pypi.python.org/pypi/python-libmilter/">
+pure Python milter libraries</a> that implement the milter protocol in Python.
 <li> The <a href="policy.html">milter</a> package provides the beginnings of a
 general purpose mail filtering system written in Python.  It also includes
 a simple spfmilter that supports policy by domain and spf result via
@@ -155,9 +157,8 @@ low level <code>DNS</code> library for python DNS lookups.  It is much smaller
 and lighter than the more capable (and bigger)
 <a href="http://www.dnspython.org/"> dnspython</a> library.  Low level lookups
 are needed to find SPF and MX records for instance.  
-<li> The <a href="dspam.html">pydspam</a> package wraps an old version of
-libdspam for python.  The C API changed dramatically for new versions, and I
-haven't gotten things updated yet.  Another content filter might be in order.
+<li> The <a href="https://pypi.python.org/pypi/pydspam/">pydspam</a> package
+wraps libdspam for python.  
 </ul>
 <p>
 At the lowest level, the <code>milter</code> module provides a thin wrapper around the
@@ -193,7 +194,8 @@ Finally, the bms.py application is both a sample of how to use the
 Milter and spf modules, and the beginnings of a general purpose SPAM filtering,
 wiretapping, SPF checking, and Win32 virus protecting milter.  It can
 make use of the <a href="pysrs.html">pysrs</a> package when available for
-SRS/SES checking and the <a href="dspam.html">pydspam</a> package for Bayesian
+SRS/SES checking and the <a
+href="https://pypi.python.org/pypi/pydspam/">pydspam</a> package for Bayesian
 content filtering.  SPF checking
 requires <a href="http://pydns.sourceforge.net/">
 pydns</a>.  Configuration documentation is currently included as comments
@@ -291,12 +293,6 @@ greatly speeds things up.
 <li> The bms.py milter has too many features.  Create a framework where
      numerous small feature modules can be plugged together in the
      configuration.
-<li> Create a pure python substitute for miltermodule and libmilter that
-     implements the <a
-href="http://www.duh.org/cvsweb.cgi/~checkout~/pmilter/doc/milter-protocol.txt?rev=1">
-     libmilter protocol</a> in python.  Someone has already 
-     <a href="http://code.google.com/p/ppymilter/">started this</a>
-     at Google code.
 <li> Find or write a faster implementation of sgmllib.  The 
      <a href="http://www.effbot.org/zone/sgmlop-index.htm">sgmlop package</a>
      is not very compatible with 
@@ -361,7 +357,5 @@ easy once the configuration is designed.
 <hr>
 <p>
 <a href="http://validator.w3.org/check/referer">
-<img border=0 src="http://bmsi.com/vh32.png" alt=" [ Valid HTML 3.2! ] " height=31 width=88></a>
-<a href="http://www.redhat.com">
-<img src="http://bmsi.com/art/powered_by.gif" width="88" height="31" alt=" [ Powered By Red Hat Linux ] " border="0"></a>
+<img border=0 src="vh32.png" alt=" [ Valid HTML 3.2! ] " height=31 width=88></a>
 </p>

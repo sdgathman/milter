@@ -28,7 +28,6 @@
 <li><a href="http://sspaeth.de/uploads/tmp/pydns/index.html">pydns</a>
  -->
 <li><a href="http://bmsi.com/python/pygossip.html">pygossip</a>
-<li><a href="http://bmsi.com/python/dspam.html">pydspam</a>
-<li><a href="http://bmsi.com/libdspam/dspam.html">libdspam</a>
+<li><a href="https://pypi.python.org/pypi/pydspam/">pydspam</a>
 <h3>Translations</h3>
 <li><a href="http://webhostingrating.com/libs/bmsi-milter-be">Belorussian</a>
