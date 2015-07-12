@@ -318,7 +318,7 @@ working and unencumbered proposal for RFC2822 headers surfaces.
 
 <p>
 <a href="http://openspf.com">
-<img src="SPF.gif" align=left alt="SPF logo"></a>
+<img src="art/SPF.gif" align=left alt="SPF logo"></a>
 Release 0.6.6 adds support for <a href="http://openspf.com/">SPF</a>,
 a protocol to prevent forging of the envelope from address.  
 SPF support requires <a href="http://pydns.sourceforge.net/">pydns</a>.

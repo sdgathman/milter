@@ -31,7 +31,7 @@ documentation)<br>
 Last updated Jul 11, 2015</h4>
 <table rules="none">
 <tr><td>
-<img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
+<img src="art/Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
 Mascot by students of <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
 </td>
 <td>
@@ -52,7 +52,7 @@ be rejected before beginning the DATA phase (even after accepting some
 recipients).
 <table><tr><td>
 <a href="//www.python.org">
-<img src="python55.gif" align=left alt="A Python"></a>
+<img src="art/python55.gif" align=left alt="A Python"></a>
 Pymilter provides a milter module for <a href="//www.python.org">Python</a>
 that implements a python interface to libmilter exploiting all its features.
 </td></table>

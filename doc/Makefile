@@ -28,7 +28,7 @@ clean:
 	-rm $(GENERATED_HTML)
 
 install: all
-	rsync $(ARGS) *.html *.gif art/*.* $(DEST)
+	rsync $(ARGS) *.html art/*.* $(DEST)
 	mv milter.html index.html
 	cp ../milter.cfg .
-	zip doc HOWTO *.cfg *.html *.gif *.asc art/*.*
+	zip doc HOWTO *.cfg *.html *.asc art/*.*

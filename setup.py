@@ -19,7 +19,7 @@ and SPF result is also included.
 	maintainer="Stuart D. Gathman",
 	maintainer_email="stuart@bmsi.com",
 	license="GPL",
-	url="http://www.bmsi.com/python/milter.html",
+	url="http://pythonhosted.org/milter/",
 	keywords = ['sendmail','milter'],
 	classifiers = [
 	  'Development Status :: 5 - Production/Stable',
