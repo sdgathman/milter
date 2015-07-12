@@ -14,7 +14,7 @@
 <li><a href="http://bmsi.com/mailman/listinfo/pymilter">Mailing&nbsp;List</a>
 <li><a href="credits.html">CREDITS</a>
 <li><a href="license.html">LICENSE</a>
-<li><a href="http://sourceforge.net"><img src="/art/sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
+<li><a href="http://sourceforge.net"><img src="art/sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
 <h3>Links</h3>
 <li><a href="http://pythonhosted.org/pymilter/milter_api/index.html">C&nbsp;API</a>
 <li><a href="http://www.python.org/">Python.Org</a>

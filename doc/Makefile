@@ -31,4 +31,4 @@ install: all
 	rsync $(ARGS) *.html *.gif art/*.* $(DEST)
 	mv milter.html index.html
 	cp ../milter.cfg .
-	zip doc HOWTO *.cfg *.html *.gif art/*.jpg art/*.png *.asc art/*.gif
+	zip doc HOWTO *.cfg *.html *.gif *.asc art/*.*
