@@ -165,7 +165,7 @@ At the lowest level, the <code>milter</code> module provides a thin wrapper arou
 <a href="http://pythonhosted.org/pymilter/milter_api/index.html">
 sendmail libmilter API</a>.  This API lets you register callbacks for 
 a number of events in the
-<a href="http://www.cs.concordia.ca/~group/fig/public/email/relay/milter+ruleset-checks.html">process of sendmail receiving a message via SMTP</a>.  
+<a href="https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol#SMTP_transport_example">process of sendmail receiving a message via SMTP</a>.  
 These events include the initial connection from a MTA,
 the envelope sender and recipients, the top level mail headers, and
 the message body.  There are options to mangle all of these components
