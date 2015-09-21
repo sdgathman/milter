@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.205  2015/05/16 22:36:25  customdesigned
+# Pass test cases with access_file_nulls support.
+#
 # Revision 1.204  2015/05/15 02:08:43  customdesigned
 # Log error opening access file.  Support WHITELIST for SMTP-Auth.
 #
@@ -2131,7 +2134,8 @@ class bmsMilter(Milter.Base):
               if self.spf:
                 if self.spf_guess == 'pass' or q.result == 'none' \
 			or self.spf.o == self.dkim_domain \
-			or self.dkim_domain in self.config.email_providers:
+			or (self.dkim_domain and 
+                            self.dkim_domain in self.config.email_providers):
                   self.confidence = 0	# ban regardless of reputation status
                   s = rcpt.split('@')[0][-1]
                   self.bandomain(wild=s.isdigit() and int(s))
