@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.206  2015/09/21 16:39:51  customdesigned
+# Missed check for missing self.dkim_domain
+#
 # Revision 1.205  2015/05/16 22:36:25  customdesigned
 # Pass test cases with access_file_nulls support.
 #
@@ -290,8 +293,9 @@
 #
 # See ChangeLog
 #
-# Author: Stuart D. Gathman <stuart@bmsi.com>
-# Copyright 2001,2002,2003,2004,2005-2015 Business Management Systems, Inc.
+# Author: Stuart D. Gathman <stuart@gathman.org>
+# Copyright 2001,2002,2003,2004,2005-2013 Business Management Systems, Inc.
+# Copyright 2013-2015 Stuart D. Gathman
 # This code is under the GNU General Public License.  See COPYING for details.
 
 import sys
@@ -547,6 +551,7 @@ local = threading.local()
 ## Read config files.
 # Only some configs are returned in a Config object.  Most are still
 # globals set as a side effect.  The intent is to migrate them over time.
+# @param list List of config file pathnames to check in order
 # @return Config
 def read_config(list):
   cp = MilterConfigParser({
@@ -724,7 +729,10 @@ def read_config(list):
       gossip_node = gossip.server.Gossip(gossip_db,1000)
       for p in cp.getlist('gossip','peers'):
         host,port = gossip.splitaddr(p)
-        gossip_node.peers.append(gossip.server.Peer(host,port))
+        try:
+          gossip_node.peers.append(gossip.server.Peer(host,port))
+	except socket.gaierror as x:
+          milter_log.error("gossip peers: %s",x,exc_info=True)
     gossip_ttl = cp.getintdefault('gossip','ttl',1)
 
   # greylist section
@@ -2060,7 +2068,7 @@ class bmsMilter(Milter.Base):
   def check_dkim(self):
       txt = self.get_pristine_txt()
       res = False
-      result = 'fail'
+      result = 'error'
       d = dkim.DKIM(txt,logger=milter_log,minkey=768)
       try:
         res = d.verify()
@@ -2069,6 +2077,10 @@ class bmsMilter(Milter.Base):
           result = 'pass'
         else:
           dkim_comment = 'Bad %d bit signature.' % d.keysize
+	  result = 'fail'
+      except dkim.ValidationError as x:
+        dkim_comment = str(x)
+	result = 'fail'
       except dkim.DKIMException as x:
         dkim_comment = str(x)
 	#self.log('DKIM: %s'%x)
@@ -2123,13 +2135,17 @@ class bmsMilter(Milter.Base):
               else:
                 self.spf = None
               if self.external_dkim:
-                ar = authres.AuthenticationResultsHeader.parse_value(
-			self.external_dkim)
-                for r in ar.results:
-                  if r.method == 'dkim' and r.result == 'pass':
-                    for p in r.properties:
-                      if p.type == 'header' and p.name == 'd':
-                        self.dkim_domain = p.value
+	        try:
+		  ar = authres.AuthenticationResultsHeader.parse_value(
+			  self.external_dkim)
+		  for r in ar.results:
+		    if r.method == 'dkim' and r.result == 'pass':
+		      for p in r.properties:
+			if p.type == 'header' and p.name == 'd':
+			  self.dkim_domain = p.value
+		except Exception,x:
+		  self.log("ext_dkim:",x)
+		  milter_log.error("ext_dkim: %s",x,exc_info=True)
             if user == 'bandom' and self.internal_connection:
               if self.spf:
                 if self.spf_guess == 'pass' or q.result == 'none' \
