@@ -114,7 +114,7 @@ package by annotating callback methods with @nocallback or @noreply.
 <h3><a name=support>Support</a></h3>
 
 <ul>
-<li> <a href="http://bmsi.com/mailman/listinfo/pymilter">pymilter mailing list</a>
+<li> <a href="https://gathman.org/mailman/listinfo/pymilter">pymilter mailing list</a>
 <li> <a href="http://www.openspf.net/Forums">SPF forums and chat</a> for SPF questions
 <li> IRC channel: <b>#dkim</b> on irc.perl.org for DKIM questions
 <li> IRC channel: <b>#pymilter</b> on irc.freenode.net for pymilter questions
@@ -308,7 +308,7 @@ greatly speeds things up.
 
 <h3> Confirmed Installations </h3>
 
-Please <a href="mailto:%73%74%75%61%72%74%40%62%6D%73%69%2E%63%6F%6D">email</a>
+Please <a href="mailto:stuart@gathman.org">email</a>
 me if you do <i>not</i> successfully install milter.  The confirmed
 installations are too numerous to list at this point.
 
