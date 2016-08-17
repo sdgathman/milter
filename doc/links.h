@@ -11,7 +11,7 @@
 <li><a href="faq.html">FAQ</a>
 <li><a href="policy.html">Policies</a>
 <li><a href="logmsgs.html">Log&nbsp;Messages</a>
-<li><a href="http://bmsi.com/mailman/listinfo/pymilter">Mailing&nbsp;List</a>
+<li><a href="https://gathman.org/mailman/listinfo/pymilter">Mailing&nbsp;List</a>
 <li><a href="credits.html">CREDITS</a>
 <li><a href="license.html">LICENSE</a>
 <li><a href="http://sourceforge.net"><img src="art/sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
@@ -27,7 +27,7 @@
 <!--
 <li><a href="http://sspaeth.de/uploads/tmp/pydns/index.html">pydns</a>
  -->
-<li><a href="http://bmsi.com/python/pygossip.html">pygossip</a>
+<li><a href="https://pypi.python.org/pypi/pygossip/">pygossip</a>
 <li><a href="https://pypi.python.org/pypi/pydspam/">pydspam</a>
 <h3>Translations</h3>
 <li><a href="http://webhostingrating.com/libs/bmsi-milter-be">Belorussian</a>
