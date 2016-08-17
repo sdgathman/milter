@@ -731,7 +731,7 @@ def read_config(list):
         host,port = gossip.splitaddr(p)
         try:
           gossip_node.peers.append(gossip.server.Peer(host,port))
-	except socket.gaierror as x:
+        except socket.gaierror as x:
           milter_log.error("gossip peers: %s",x,exc_info=True)
     gossip_ttl = cp.getintdefault('gossip','ttl',1)
 
@@ -1234,8 +1234,8 @@ class bmsMilter(Milter.Base):
           if self.trusted_relay or self.localhost:
             policy = 'OK'
         if policy:
-	  if policy == 'WHITELIST':
-	    self.whitelist = True
+          if policy == 'WHITELIST':
+            self.whitelist = True
           elif policy != 'OK':
             self.log("REJECT: unauthorized user",self.user,
                 "at",self.connectip,"sending MAIL FROM",self.canon_from)
@@ -2077,13 +2077,13 @@ class bmsMilter(Milter.Base):
           result = 'pass'
         else:
           dkim_comment = 'Bad %d bit signature.' % d.keysize
-	  result = 'fail'
+          result = 'fail'
       except dkim.ValidationError as x:
         dkim_comment = str(x)
-	result = 'fail'
+        result = 'fail'
       except dkim.DKIMException as x:
         dkim_comment = str(x)
-	#self.log('DKIM: %s'%x)
+        #self.log('DKIM: %s'%x)
       except Exception as x:
         dkim_comment = str(x)
         milter_log.error("check_dkim: %s",x,exc_info=True)
@@ -2135,17 +2135,17 @@ class bmsMilter(Milter.Base):
               else:
                 self.spf = None
               if self.external_dkim:
-	        try:
-		  ar = authres.AuthenticationResultsHeader.parse_value(
-			  self.external_dkim)
-		  for r in ar.results:
-		    if r.method == 'dkim' and r.result == 'pass':
-		      for p in r.properties:
-			if p.type == 'header' and p.name == 'd':
-			  self.dkim_domain = p.value
-		except Exception,x:
-		  self.log("ext_dkim:",x)
-		  milter_log.error("ext_dkim: %s",x,exc_info=True)
+                try:
+                  ar = authres.AuthenticationResultsHeader.parse_value(
+        		  self.external_dkim)
+                  for r in ar.results:
+                    if r.method == 'dkim' and r.result == 'pass':
+                      for p in r.properties:
+                        if p.type == 'header' and p.name == 'd':
+                          self.dkim_domain = p.value
+                except Exception,x:
+                  self.log("ext_dkim:",x)
+                  milter_log.error("ext_dkim: %s",x,exc_info=True)
             if user == 'bandom' and self.internal_connection:
               if self.spf:
                 if self.spf_guess == 'pass' or q.result == 'none' \

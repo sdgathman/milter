@@ -69,8 +69,8 @@ class SPFPolicy(object):
       try:
         acf = anydbm.open(access_file,'r')
       except:
-	syslog.syslog('%s: Cannot open for reading'%access_file)
-	acf = None
+        syslog.syslog('%s: Cannot open for reading'%access_file)
+        acf = None
     else: acf = None
     self.acf = acf
 
@@ -94,10 +94,10 @@ class SPFPolicy(object):
         try:
           return acf[pfx + sfx].rstrip('\x00')
         except KeyError:
-	  try:
-	    return acf[pfx.rstrip(':') + sfx].rstrip('\x00')
-	  except KeyError:
-	    return None
+          try:
+            return acf[pfx.rstrip(':') + sfx].rstrip('\x00')
+          except KeyError:
+            return None
   
 class spfMilter(Milter.Base):
   "Milter to check SPF.  Each connection gets its own instance."
@@ -235,7 +235,7 @@ class spfMilter(Milter.Base):
       res,code,txt = q.check()
     if res not in ('pass','temperror'):
       if self.mailfrom != '<>':
-	# check hello name via spf unless spf pass
+        # check hello name via spf unless spf pass
         h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
         hres,hcode,htxt = h.check()
         with SPFPolicy(self.hello_name,self.conf) as hp:
