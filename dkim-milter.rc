@@ -50,7 +50,7 @@ start() {
 	daemon --check ${prog} --pidfile "${piddir}/${prog}.pid" --user mail \
 	daemonize -a -e "${logdir}/${prog}.log" -o "${logdir}/${prog}.log" \
 		-c "${workdir}" -p "${piddir}/${prog}.pid" \
-		/usr/bin/${python} ${script}.py 
+		/usr/bin/${python} /usr/libexec/milter/${script}.py 
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/${prog}

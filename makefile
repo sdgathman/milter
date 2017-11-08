@@ -1,11 +1,6 @@
-VERS=milter-0.8.18
-V=milter-0_8_18
+VERS=milter-0.9
+TAG=$(VERS)
+SRCTAR=$(VERS).tar.gz
 
 tar:
-	cvs export -r $(V) -d $(VERS) milter
-	tar cvf $(VERS).tar $(VERS)
-	gzip -v $(VERS).tar
-	rm -rf $(VERS)
-
-tag:	
-	cvs tag -F $(V)
+	git archive --format=tar.gz --prefix=$(VERS)/ -o $(SRCTAR) $(TAG)

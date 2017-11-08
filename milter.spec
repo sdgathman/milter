@@ -2,36 +2,47 @@
 # module.  To compile all three on 32-bit Intel, use:
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
-%define __python python2.6
-%if "%{dist}" == ".el4" || "%{dist}" == ".el5"
-%define pythonbase python26
+%if 0%{?rhel} == 6
+%global __python python2.6
+%global pythonbase python26
+%global use_systemd 0
+%global sysvinit milter.rc
 %else
-%define pythonbase python
+%global use_systemd 1
+%global __python python2
+%global pythonbase python
 %endif
-%define sysvinit milter.rc
-%define libdir %{_libdir}/pymilter
-%define logdir /var/log/milter
-%define datadir /var/lib/milter
+%global libdir %{_libdir}/pymilter
+%global logdir /var/log/milter
+%global datadir /var/lib/milter
 
 Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
 Version: 0.9
-Release: 1%{dist}.py26
+Release: 1%{dist}
 Source: milter-%{version}.tar.gz
-Patch: %{name}-%{version}.patch
+Source1: bmsmilter.service
+#Patch: %{name}-%{version}.patch
 License: GPLv2+
-Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
 BuildArch: noarch
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{pythonbase} >= 2.6.5, %{pythonbase}-pyspf >= 2.0.6, daemonize
+Requires: %{pythonbase} >= 2.6.5, %{pythonbase}-pyspf >= 2.0.6
 Requires: %{pythonbase}-pymilter >= 0.9.8, %{pythonbase}-pydns >= 2.3.5
 Conflicts: %{pythonbase}-pydkim < 0.5.3
 Conflicts: pydspam < 1.3
-%ifos Linux
-Requires: chkconfig
+%if %{use_systemd}
+# systemd macros are not defined unless systemd is present
+BuildRequires: systemd
+Requires: systemd
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
+%else
+BuildRequires:  ed
+Requires: chkconfig, daemonize
 %endif
 
 %description
@@ -63,16 +74,16 @@ access file and can be tailored by domain.
 
 %prep
 %setup -q -n milter-%{version}
-%patch -p0 -b .bms
+#patch -p0 -b .bms
 
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir -p $RPM_BUILD_ROOT%{logdir}/save
 mkdir -p $RPM_BUILD_ROOT%{datadir}
-mkdir -p $RPM_BUILD_ROOT%{libdir}
+mkdir -p $RPM_BUILD_ROOT%{_libexecdir}/milter
 cp *.txt $RPM_BUILD_ROOT%{datadir}
-cp -p bms.py spfmilter.py dkim-milter.py ban2zone.py $RPM_BUILD_ROOT%{libdir}
+cp -p bms.py spfmilter.py dkim-milter.py ban2zone.py $RPM_BUILD_ROOT%{_libexecdir}/milter
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 cp spfmilter.cfg $RPM_BUILD_ROOT/etc/mail
 cp dkim-milter.cfg $RPM_BUILD_ROOT/etc/mail
@@ -114,6 +125,11 @@ find %{logdir}/save -mtime +7 | xargs $R rm
 EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 
+%if %{use_systemd}
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}
+#cp -p *.service $RPM_BUILD_ROOT%{_unitdir}
+cp -p %{SOURCE1} $RPM_BUILD_ROOT%{_unitdir}
+%else
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 cp %{sysvinit} $RPM_BUILD_ROOT/etc/rc.d/init.d/milter
 cp spfmilter.rc $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter
@@ -142,9 +158,23 @@ python="%{__python}"
 w
 q
 EOF
+%endif
 
 mkdir -p $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
 cp -p rhsbl.m4 $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
+
+%if %{use_systemd}
+
+%post
+%systemd_post pysrs.service
+
+%postun
+%systemd_postun_with_restart pysrs.service
+
+%preun
+%systemd_preun pysrs.service
+
+%else
 
 %post 
 #echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
@@ -171,16 +201,22 @@ if [ $1 = 0 ]; then
   /sbin/chkconfig --del dkim-milter
 fi
 
+%endif
+
 %files 
 %defattr(-,root,root)
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
+%if %{use_systemd}
+%{_unitdir}/*
+%else
 /etc/rc.d/init.d/milter
+%endif
 %defattr(-,mail,mail)
 %dir %{logdir}/save
 %dir %{datadir}
-%{libdir}/bms.py
-%{libdir}/ban2zone.py
+%{_libexecdir}/milter/bms.py
+%{_libexecdir}/milter/ban2zone.py
 %config(noreplace) %{datadir}/strike3.txt
 %config(noreplace) %{datadir}/softfail.txt
 %config(noreplace) %{datadir}/fail.txt
@@ -194,15 +230,19 @@ fi
 
 %files spf
 %defattr(-,root,root)
-%{libdir}/spfmilter.py*
+%{_libexecdir}/milter/spfmilter.py*
 %config(noreplace) /etc/mail/spfmilter.cfg
+%if !%{use_systemd}
 /etc/rc.d/init.d/spfmilter
+%endif
 
 %files dkim
 %defattr(-,root,root)
-%{libdir}/dkim-milter.py*
+%{_libexecdir}/milter/dkim-milter.py*
 %config(noreplace) /etc/mail/dkim-milter.cfg
+%if !%{use_systemd}
 /etc/rc.d/init.d/dkim-milter
+%endif
 /etc/logrotate.d/dkim-milter
 
 %clean
@@ -469,7 +509,7 @@ rm -rf $RPM_BUILD_ROOT
 - Properly remove local socket with explicit type.
 - Decode obfuscated subject headers.
 
-* Wed Mar 11 2004 Stuart Gathman <stuart@bmsi.com> 0.6.6-2
+* Thu Mar 11 2004 Stuart Gathman <stuart@bmsi.com> 0.6.6-2
 - init script bug with python2.3
 
 * Wed Mar 10 2004 Stuart Gathman <stuart@bmsi.com> 0.6.6-1
@@ -496,7 +536,7 @@ rm -rf $RPM_BUILD_ROOT
 * Mon Sep 01 2003 Stuart Gathman <stuart@bmsi.com> 0.6.1
 - Full dspam support added
 
-* Mon Aug 26 2003 Stuart Gathman <stuart@bmsi.com>
+* Tue Aug 26 2003 Stuart Gathman <stuart@bmsi.com>
 - Use New email module
 
 * Fri Jun 27 2003 Stuart Gathman <stuart@bmsi.com>

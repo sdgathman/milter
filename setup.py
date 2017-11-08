@@ -5,7 +5,7 @@ from distutils.core import setup, Extension
 # Use the spec file to install the machinery to run this as a service.
 # This setup is just used to register.
 
-setup(name = "milter", version = '0.8.18',
+setup(name = "milter", version = '0.9',
 	description="Anti-forgery, reputation tracking, anti-spam milter",
 	long_description="""\
 This is a milter application based on pymilter.  It implements per-domain
