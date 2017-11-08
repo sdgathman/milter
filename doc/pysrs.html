@@ -20,9 +20,9 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
 </P>
 <h1 align=center>Sender Rewriting Scheme in Python</h1>
 <h4 align=center>
-This web page is written by Stuart D. Gathman<br>and<br>sponsored by
+This web page is written by Stuart D. Gathman<br>and<br>originally sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Jul 31, 2006</h4>
+Last updated Oct 17, 2017</h4>
 
 <p>
 This is a <a href="http://www.python.org/">Python</a> implementation of
@@ -33,20 +33,16 @@ by Shevek.  It includes a test suite, which currently checks four
 levels of forwarding and subsequent reversal for the Guarded, DB, and
 Reversible implementations.
 <ul>
-<li>This package includes scripts to be used as sendmail program maps.  See
-<a href="http://asarian-host.net/srs/sendmailsrs.htm">sendmail integration</a>
-for an explanation and instructions on incorporating SRS into
-<code>sendmail.cf</code>, substituting <code>envfrom2srs.py</code> and
-<code>srs2envtol.py</code> for the perl scripts.  Even simpler, use the
-supplied sendmail m4 hack with <code>sendmail.mc</code>.
 <li>SRS.Daemon.Daemon() provides a simple socket daemon suitable
 for use with the Exim mailer.
 <li>RPM now includes a sendmail socketmap daemon.  The program map is
 no longer recommended.  It is slow and a security risk.  Prior to socketmaps,
 it was all that was available for a custom map.  Socketmap is available
 in <a href="http://www.sendmail.org">sendmail 8.13</a>.
-<li>For best results, use with <a href="milter.html">Python milter</a>
-    to reject unsigned recipients.
+Use the supplied sendmail m4 hack with <code>sendmail.mc</code> to
+install the socketmap.
+<li>For best results, use with <a href="http://pythonhosted.org/milter/">
+Python milter</a> to reject unsigned recipients.
 </ul>
 
 <h3> Sendmail integration </h3>
@@ -91,6 +87,6 @@ the original program map is still available as <code>HACK(pysrsprog)</code>.
 
 <h3>Downloads</h3>
 
-Goto <a href="http://sourceforge.net/project/showfiles.php?group_id=139894&package_id=153866&release_id=435965">Sourceforge file release</a>.
+Goto <a href="https://github.com/sdgathman/pysrs">Github repo</a> for latest source.
 
 </body></html>

@@ -10,7 +10,7 @@ HTSTYLE =	MilterGenerator
 HTALLFLAGS =	-f -s $(HTSTYLE)
 HTFLAGS =	$(HTALLFLAGS) -r $(HTROOT)
 
-DEST = 		spidey:/Public/python
+DEST = 		bmsi.com:/var/www/html/python
 EXCLUDES =	--exclude CVS
 ARGS = 		--rsh=ssh -v -r -l -t --update --delete $(EXCLUDES)
 
@@ -28,7 +28,7 @@ clean:
 	-rm $(GENERATED_HTML)
 
 install: all
-	rsync $(ARGS) *.html art/*.* $(DEST)
+	#rsync $(ARGS) *.html art/*.* $(DEST)
 	mv milter.html index.html
 	cp ../milter.cfg .
 	zip doc HOWTO *.cfg *.html *.asc art/*.*
