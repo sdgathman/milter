@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python2
 # A simple milter that has grown quite a bit.
 # $Log$
 # Revision 1.206  2015/09/21 16:39:51  customdesigned
@@ -2734,13 +2734,16 @@ if __name__ == "__main__":
   config = read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
       
   if dspam_dict:
-    import dspam        # low level spam check
+    try: import dspam        # low level spam check
+    except: dspam_dict = None
   if dspam_userdir:
-    import dspam
-    import Dspam        # high level spam check
     try:
-      dspam_version = Dspam.VERSION
-    except:
-      dspam_version = '1.1.4'
-    assert dspam_version >= '1.1.5'
+      import dspam
+      import Dspam        # high level spam check
+      try:
+        dspam_version = Dspam.VERSION
+      except:
+        dspam_version = '1.1.4'
+      assert dspam_version >= '1.1.5'
+    except: dspam_userdir = None
   main()

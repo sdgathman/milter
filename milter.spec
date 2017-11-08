@@ -84,6 +84,7 @@ mkdir -p $RPM_BUILD_ROOT%{datadir}
 mkdir -p $RPM_BUILD_ROOT%{_libexecdir}/milter
 cp *.txt $RPM_BUILD_ROOT%{datadir}
 cp -p bms.py spfmilter.py dkim-milter.py ban2zone.py $RPM_BUILD_ROOT%{_libexecdir}/milter
+chmod a+x $RPM_BUILD_ROOT%{_libexecdir}/milter/*.py
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 cp spfmilter.cfg $RPM_BUILD_ROOT/etc/mail
 cp dkim-milter.cfg $RPM_BUILD_ROOT/etc/mail
@@ -249,6 +250,9 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Wed Nov  8 2017 Stuart Gathman <stuart@gathman.org> 0.9-1
+- Support EL7 and systemd
+
 * Fri Feb 28 2014 Stuart Gathman <stuart@gathman.org> 0.8.18-4
 - Fix errors in initscripts
 

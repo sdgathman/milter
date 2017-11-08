@@ -1,0 +1,15 @@
+[Unit]
+Description=BMS Milter Service
+Wants=network.target
+After=network-online.target sendmail.service
+
+[Service]
+Type=simple
+WorkingDirectory=/var/lib/milter
+User=mail
+Group=mail
+SyslogIdentifier=bmsmilter
+ExecStart=/usr/libexec/milter/bms.py
+
+[Install]
+WantedBy=multi-user.target
