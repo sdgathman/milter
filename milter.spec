@@ -20,10 +20,9 @@ Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
 Version: 0.9
-Release: 1%{dist}
+Release: 2%{dist}
 Source: milter-%{version}.tar.gz
 Source1: bmsmilter.service
-#Patch: %{name}-%{version}.patch
 License: GPLv2+
 BuildRoot: %{_tmppath}/%{name}-buildroot
 BuildArch: noarch
@@ -92,13 +91,15 @@ cp dkim-milter.cfg $RPM_BUILD_ROOT/etc/mail
 # logfile rotation
 mkdir -p $RPM_BUILD_ROOT/etc/logrotate.d
 cat >$RPM_BUILD_ROOT/etc/logrotate.d/milter <<'EOF'
+%if !%{use_systemd}
 %{logdir}/milter.log {
   copytruncate
   compress
 }
+%endif
 %{logdir}/banned_ips {
   rotate 7
-  daily
+  weekly
   copytruncate
 }
 %{logdir}/banned_domains {
@@ -122,7 +123,11 @@ cat >$RPM_BUILD_ROOT/etc/cron.daily/milter <<'EOF'
 
 find %{logdir}/save -mtime +7 | xargs $R rm
 # work around any memory leaks
+%if %{use_systemd}
+systemctl condrestart bmsmilter
+%else
 /etc/init.d/milter condrestart
+%endif
 EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 
@@ -250,6 +255,9 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Fri Jul 27 2018 Stuart Gathman <stuart@gathman.org> 0.9-2
+- Fix rotation and restarts for systemd
+
 * Wed Nov  8 2017 Stuart Gathman <stuart@gathman.org> 0.9-1
 - Support EL7 and systemd
 
