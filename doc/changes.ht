@@ -2,9 +2,15 @@ Title: Recent Changes
 
 <!-- This is part of the Python Milter Applications documentation.
  Copyright (C) 2001,2002,2003,2004,2005-2011 Business Management Systems, Inc.
+ Copyright (C) 2017,2018 Stuart D. Gathman
  See the file license.ht for copying conditions.  -->
 
 <h2> Recent Changes for the <code>pymilter</code> project </h2>
+
+<h3> 1.0.2 </h3>
+Python3 support!  Source repo has been moved to
+<a href="https://github.com/sdgathman/pymilter">pymilter Github
+project</a> for development and release downloads.
 
 <h3> 1.0 </h3>
 Remove start.sh to track EPEL repository, use daemonize as replacement

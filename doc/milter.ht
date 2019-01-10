@@ -4,7 +4,7 @@ Author-Email: stuart@gathman.org
 
 <!-- This is part of the Python Milter Applications documentation.
  Copyright (C) 2001,2002,2003,2004,2005-2013 Business Management Systems, Inc.
- Copyright (C) 2013-2015 Stuart D. Gathman
+ Copyright (C) 2013-2018 Stuart D. Gathman
  See the file license.ht for copying conditions.  -->
 
 <P ALIGN="CENTER"><A HREF="http://www.anybrowser.org/campaign/">
@@ -28,7 +28,7 @@ This web page is written by Stuart D. Gathman<br>and<br> originally sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
 (see <a href="license.html">LICENSE</a> for copying permissions for this
 documentation)<br>
-Last updated Jul 11, 2015</h4>
+Last updated Jan  2, 2019</h4>
 <table rules="none">
 <tr><td>
 <img src="art/Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
@@ -36,12 +36,13 @@ Mascot by students of <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian
 </td>
 <td>
 
-See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
+See the <a href="faq.html">FAQ</a> | <a href="https://github.com/sdgathman/pymilter/releases">Download pymilter now</a> |
+<a href="https://github.com/sdgathman/milter/releases">Download bmsmilter now</a> |
 <a href="#support">Support</a> |
 <a href="#overview">Overview</a> 
 <p>
 <a href="//www.sendmail.org/">Sendmail</a> introduced a
-<a href="http://pythonhosted.org/pymilter/milter_api/index.html">new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.
+<a href="http://bmsi.com/pymilter/milter_api/index.html">new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.
 Version 8.12 seems to be more robust, and includes new privilege
 separation features to enhance security.  Even better, sendmail 8.13
 supports socket maps, which makes <a href="pysrs.html">pysrs</a> much more
@@ -67,6 +68,11 @@ for Postfix in Python.
 <h3> What's New </h3>
 
 <ul>
+<li> pymilter 1.0.3 adds a new textctx milter testing framework
+<li> pymilter 1.0.2 add python3 support and moves development to 
+<a href="https://github.com/sdgathman/pymilter">Github</a>.
+<li> milter 0.9 runs on EL7 and moves development to
+<a href="https://github.com/sdgathman/milter">Github</a>.
 <li> pymilter 1.0 removes the start.sh glue script.  EL6 RPMs for packages
 using pymilter (milter,pysrs,pygossip) now use daemonize as a replacement.
 ACCEPT is supported as an untrapped exception policy.  An optional dir for
@@ -83,7 +89,6 @@ ascii.  But some people try to use an extended set anyway, crashing
 pyspf.  We now return PermError for non-ascii SPF records.  IP address
 parsing and arithmetic is now handled by the ipaddr (ipaddress in python3)
 module.  I fixed a bug caused by a null CNAME in cache.
-
 <li> milter 0.8.18 adds test cases and SMTP AUTH policies in sendmail access
 for spf-milter.  You can now also configure an untrapped exception
 policy for spf-milter, and it rejects numeric HELO.  For the bms milter,
@@ -130,7 +135,7 @@ channel. There is a page describing how to register your nick at
 To accomodate other open source projects using pymilter, this package has been
 shedding modules which can be used by other packages.
 <ul>
-<li> The <a href="http://pythonhosted.org/pymilter/">pymilter</a> package provides a robust toolkit for Python <a
+<li> The <a href="http://bmsi.com/pymilter/">pymilter</a> package provides a robust toolkit for Python <a
 href="#milter">milters</a> that wraps the C libmilter library.  There
 are also <a href="http://code.google.com/p/ppymilter/">several</a>
 <a href="https://pypi.python.org/pypi/python-libmilter/">
@@ -152,17 +157,17 @@ detecting email forgery.
 exchanges reputation of qualified domains.  (Qualified in the milter package
 means that example.com:PASS tracks a different reputation than
 example.com:NEUTRAL.)
-<li> The <a href="http://pydns.sourceforge.net/">pydns</a> package provides the
+<li> The <a href="https://launchpad.net/pydns">pydns</a> package provides the
 low level <code>DNS</code> library for python DNS lookups.  It is much smaller
 and lighter than the more capable (and bigger)
 <a href="http://www.dnspython.org/"> dnspython</a> library.  Low level lookups
 are needed to find SPF and MX records for instance.  
-<li> The <a href="https://pypi.python.org/pypi/pydspam/">pydspam</a> package
+<li> The <a href="https://github.com/sdgathman/pydspam/">pydspam</a> package
 wraps libdspam for python.  
 </ul>
 <p>
 At the lowest level, the <code>milter</code> module provides a thin wrapper around the
-<a href="http://pythonhosted.org/pymilter/milter_api/index.html">
+<a href="http://bmsi.com/pymilter/milter_api/index.html">
 sendmail libmilter API</a>.  This API lets you register callbacks for 
 a number of events in the
 <a href="https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol#SMTP_transport_example">process of sendmail receiving a message via SMTP</a>.  
@@ -197,7 +202,7 @@ make use of the <a href="pysrs.html">pysrs</a> package when available for
 SRS/SES checking and the <a
 href="https://pypi.python.org/pypi/pydspam/">pydspam</a> package for Bayesian
 content filtering.  SPF checking
-requires <a href="http://pydns.sourceforge.net/">
+requires <a href="https://launchpad.net/pydns">
 pydns</a>.  Configuration documentation is currently included as comments
 in the <a href="milter.cfg">sample config file</a> for the bms.py milter.
 See also the <a href="HOWTO">HOWTO</a> and <a href="logmsgs.html">
@@ -231,12 +236,12 @@ Windows.
 <li> A milter can add and delete recipients to forward or secretly
 copy mail.
 <li> For more ideas, look at some of the milters linked at the
-<a href="http://pythonhosted.org/pymilter/">PyMilter Main Page</a>.
+<a href="http://bmsi.com/pymilter/">PyMilter Main Page</a>.
 </menu>
 
-<a href="http://pythonhosted.org/pymilter/milter_api/index.html">
+<a href="http://bmsi.com/pymilter/milter_api/index.html">
 Documentation for the C API</a> is provided with sendmail.  
-<a href="http://pythonhosted.org/pymilter/">Documentation for
+<a href="http://bmsi.com/pymilter/">Documentation for
 pymilter</a> is provided via Doxygen.  Miltermodule provides a thin python
 wrapper for the C API.  Milter.py provides a simple OO wrapper on top of that.  
 <p>
