@@ -16,11 +16,11 @@
 <li><a href="license.html">LICENSE</a>
 <li><a href="http://sourceforge.net"><img src="art/sflogo.png" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>
 <h3>Links</h3>
-<li><a href="http://pythonhosted.org/pymilter/milter_api/index.html">C&nbsp;API</a>
+<li><a href="http://pymilter.org/pymilter/milter_api/index.html">C&nbsp;API</a>
 <li><a href="http://www.python.org/">Python.Org</a>
 <li><a href="http://www.sendmail.org/">Sendmail.Org</a>
 <li><a href="http://www.openspf.net/">SPF</a>
-<li><a href="http://pythonhosted.org/pymilter/">pymilter</a>
+<li><a href="http://pymilter.org/pymilter/">pymilter</a>
 <li><a href="pysrs.html">pysrs</a>
 <li><a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a>
 <li><a href="https://launchpad.net/pydkim">pydkim</a>

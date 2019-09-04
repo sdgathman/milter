@@ -42,7 +42,7 @@ See the <a href="faq.html">FAQ</a> | <a href="https://github.com/sdgathman/pymil
 <a href="#overview">Overview</a> 
 <p>
 <a href="//www.sendmail.org/">Sendmail</a> introduced a
-<a href="http://bmsi.com/pymilter/milter_api/index.html">new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.
+<a href="http://pymilter.org/pymilter/milter_api/index.html">new API</a> beginning with version 8.10 - libmilter.  Sendmail 8.12 officially released libmilter.
 Version 8.12 seems to be more robust, and includes new privilege
 separation features to enhance security.  Even better, sendmail 8.13
 supports socket maps, which makes <a href="pysrs.html">pysrs</a> much more

@@ -10,7 +10,8 @@ HTSTYLE =	MilterGenerator
 HTALLFLAGS =	-f -s $(HTSTYLE)
 HTFLAGS =	$(HTALLFLAGS) -r $(HTROOT)
 
-DEST = 		bmsi.com:/var/www/html/milter
+#DEST = 		bmsi.com:/var/www/html/milter
+DEST = 		h.pymilter.org:/var/www/html/milter
 EXCLUDES =	--exclude .git
 ARGS = 		-rav -l -t --update --delete $(EXCLUDES)
 
@@ -29,6 +30,6 @@ clean:
 
 install: all
 	mv milter.html index.html
-	rsync $(ARGS) *.html art/*.* $(DEST)
+	rsync $(ARGS) *.html art $(DEST)
 	cp ../milter.cfg .
 	zip doc HOWTO *.cfg *.html *.asc art/*.*
