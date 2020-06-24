@@ -1,3 +1,292 @@
+# Revision 1.206  2015/09/21 16:39:51  customdesigned
+# Missed check for missing self.dkim_domain
+#
+# Revision 1.205  2015/05/16 22:36:25  customdesigned
+# Pass test cases with access_file_nulls support.
+#
+# Revision 1.204  2015/05/15 02:08:43  customdesigned
+# Log error opening access file.  Support WHITELIST for SMTP-Auth.
+#
+# Revision 1.203  2015/04/13 03:29:37  customdesigned
+# Move more config variables to Config object.  Include added headers
+# in check_spam and quarantine.  Update header triage for pydspam-1.3.
+#
+# Revision 1.202  2014/03/22 19:15:03  customdesigned
+# Fix bandomain with no DKIM
+#
+# Revision 1.201  2014/03/01 05:19:08  customdesigned
+# Release 0.8.18-3
+#
+# Revision 1.200  2013/07/17 21:27:02  customdesigned
+# Add logic to mask IPs or use authenticated domain for greylisting.
+# Should be a config option, however.
+#
+# Revision 1.199  2013/05/15 17:23:41  customdesigned
+# Support DKIM whitelisting
+#
+# Revision 1.198  2013/04/30 23:06:47  customdesigned
+# Add helofail web template failure message and add common template for L&F.
+#
+# Revision 1.197  2013/04/25 18:23:09  customdesigned
+# auto_whitelist, blacklist were loading from wrong directory.
+#
+# Revision 1.196  2013/03/27 02:21:30  customdesigned
+# Recognize IPv6 localhost.
+#
+# Revision 1.195  2013/03/17 17:43:42  customdesigned
+# Default logdir to datadir.
+#
+# Revision 1.194  2013/03/15 23:04:38  customdesigned
+# Move many configs to datadir
+#
+# Revision 1.193  2013/03/12 03:29:55  customdesigned
+# Add SMTP AUTH test case for bms milter.
+#
+# Revision 1.192  2013/03/12 01:33:49  customdesigned
+# Tab nanny
+#
+# Revision 1.191  2013/03/09 23:51:11  customdesigned
+# Move email_providers to config.  Move many other configs to Config object.
+#
+# Revision 1.185  2012/07/13 21:05:57  customdesigned
+# Don't check banned ips on submission port (587).
+#
+# Revision 1.184  2012/05/24 18:26:43  customdesigned
+# Log unknown commands.
+#
+# Revision 1.181  2012/04/19 23:20:05  customdesigned
+# Simple DKIM signing support
+#
+# Revision 1.180  2012/04/12 05:37:25  customdesigned
+# Skip greylisting for trusted forwarders
+#
+# Revision 1.179  2012/02/25 22:21:16  customdesigned
+# Support urls with fuller explanation for rejections.
+#
+# Revision 1.178  2011/11/05 16:05:08  customdesigned
+# Change openspf.org -> openspf.net
+#
+# Revision 1.177  2011/11/01 17:43:33  customdesigned
+# Trust trusted relay not to be a zombie.
+#
+# Revision 1.176  2011/10/03 20:07:16  customdesigned
+# Make wiretap use orig_from (set efrom to orig_from earlier).
+#
+# Revision 1.175  2011/10/03 20:01:00  customdesigned
+# Let NOTIFY suppress real DSN.  Since notify is forged on forged email,
+# perhaps this should be an option.
+#
+# Revision 1.174  2011/10/03 17:44:38  customdesigned
+# Fix SPF fail ip reported for IP6
+#
+# Revision 1.173  2011/06/16 20:54:48  customdesigned
+# Update to pydkim-0.4 and log verified domains
+#
+# Revision 1.172  2011/06/07 22:24:38  customdesigned
+# Remove leftover tempname in envfrom.  Save failed DKIM
+#
+# Revision 1.171  2011/06/07 19:45:01  customdesigned
+# Check DKIM (log only)
+#
+# Revision 1.170  2011/05/18 02:50:54  customdesigned
+# Improve chinese detection
+#
+# Revision 1.169  2011/04/13 19:50:04  customdesigned
+# Move persistent data to /var/lib/milter
+#
+# Revision 1.168  2011/04/01 02:34:38  customdesigned
+# Fix efrom and umis with delayed reject.
+#
+# Revision 1.166  2011/03/05 05:12:55  customdesigned
+# Release 0.8.15
+#
+# Revision 1.165  2011/03/03 21:45:24  customdesigned
+# Extract original MFROM from SRS
+#
+# Revision 1.164  2010/10/27 03:07:33  customdesigned
+# Whitelist recipients from signed MFROM if aborted before DATA.
+#
+# Revision 1.163  2010/10/16 21:23:00  customdesigned
+# Send auto-whitelist recipients to whitelist_mx
+#
+# Revision 1.162  2010/08/18 03:58:06  customdesigned
+# Fix typos
+#
+# Revision 1.161  2010/08/18 03:52:09  customdesigned
+# Update reputation of parsed Received-SPF header if no Gossip header.
+#
+# Revision 1.160  2010/06/04 03:50:28  customdesigned
+# Allow wildcards just above TLD.
+#
+# Revision 1.159  2010/05/27 21:22:41  customdesigned
+# Fix helo policy lookup
+#
+# Revision 1.158  2010/05/27 18:23:33  customdesigned
+# Support HELO policies.
+#
+# Revision 1.157  2010/05/22 03:57:17  customdesigned
+# Bandomain aliases to ban wildcards.
+#
+# Revision 1.155  2010/04/16 19:51:05  customdesigned
+# Max_demerits config to disable banning ips.
+#
+# Revision 1.154  2010/04/09 18:37:53  customdesigned
+# Best guess pass is good enough to get quarrantine DSN or get banned.
+#
+# Revision 1.153  2010/04/09 18:23:34  customdesigned
+# Don't ban just for repeated anonymous MFROM
+#
+# Revision 1.152  2010/02/15 21:02:29  customdesigned
+# Lower reputation bar to avoid greylisting.
+#
+# Revision 1.151  2009/12/31 19:23:18  customdesigned
+# Don't check From unless dspam enabled.
+#
+# Revision 1.150  2009/12/30 20:53:20  customdesigned
+# Require pymilter >= 0.9.3
+#
+# Revision 1.149  2009/09/14 14:59:53  customdesigned
+# Allow illegal HELO from internal to accomodate broken copier firmware.
+#
+# Revision 1.148  2009/09/14 14:28:22  customdesigned
+# Heuristically recognize multiple MXs.
+#
+# Revision 1.147  2009/09/14 14:24:11  customdesigned
+# Trust 127.0.0.1 not to be a zombie
+#
+# Revision 1.146  2009/08/29 03:38:27  customdesigned
+# Don't ban domains unless gossip score available.
+#
+# Revision 1.145  2009/08/27 21:18:16  customdesigned
+# Track banned domains and expand the offenses that can ban an IP.
+#
+# Revision 1.141  2009/05/20 02:48:18  customdesigned
+# Restrict internal DSNs to official MTAs.
+#
+# Revision 1.140  2009/02/04 02:40:14  customdesigned
+# Parse gossip header before add_spam.  Replace nulls in smtp error txt.
+# Default internal_policy flag false.
+#
+# Revision 1.139  2008/12/22 02:34:39  customdesigned
+# Fix internal policy
+#
+# Revision 1.138  2008/12/13 21:22:51  customdesigned
+# Split off pymilter
+#
+# Revision 1.137  2008/12/06 21:13:57  customdesigned
+# Fix some reject messages.
+#
+# Revision 1.136  2008/12/04 19:42:46  customdesigned
+# SPF Pass policy
+#
+# Revision 1.135  2008/10/23 19:58:06  customdesigned
+# Example config had different names than actual code :-)
+#
+# Revision 1.134  2008/10/11 15:45:46  customdesigned
+# Don't greylist DSNs.
+#
+# Revision 1.133  2008/10/09 18:44:54  customdesigned
+# Skip greylisting for good reputation.
+#
+# Revision 1.132  2008/10/09 00:55:13  customdesigned
+# Don't reset greylist timer on early retries.
+#
+# Revision 1.131  2008/10/08 04:57:28  customdesigned
+# Greylisting
+#
+# Revision 1.130  2008/10/02 03:19:00  customdesigned
+# Delay strike3 REJECT and don't reject if whitelisted.
+# Recognize vacation messages as autoreplies.
+#
+# Revision 1.129  2008/09/09 23:24:56  customdesigned
+# Never ban a trusted relay.
+#
+# Revision 1.128  2008/09/09 23:08:16  customdesigned
+# Wasn't reading banned_ips
+#
+# Revision 1.127  2008/08/25 18:32:22  customdesigned
+# Handle missing gossip_node so self tests pass.
+#
+# Revision 1.126  2008/08/18 17:47:57  customdesigned
+# Log rcpt for SRS rejections.
+#
+# Revision 1.125  2008/08/06 00:52:38  customdesigned
+# CBV policy sends no DSN.  DSN policy sends DSN.
+#
+# Revision 1.124  2008/08/05 18:04:06  customdesigned
+# Send quarantine DSN to SPF PASS only.
+#
+# Revision 1.123  2008/07/29 21:59:29  customdesigned
+# Parse ESMTP params
+#
+# Revision 1.122  2008/05/08 21:35:56  customdesigned
+# Allow explicitly whitelisted email from banned_users.
+#
+# Revision 1.121  2008/04/10 14:59:35  customdesigned
+# Configure gossip TTL.
+#
+# Revision 1.120  2008/04/02 18:59:14  customdesigned
+# Release 0.8.10
+#
+# Revision 1.119  2008/04/01 00:13:10  customdesigned
+# Do not CBV whitelisted addresses.  We already know they are good.
+#
+# Revision 1.118  2008/01/09 20:15:49  customdesigned
+# Handle unquoted fullname when parsing email.
+#
+# Revision 1.117  2007/11/29 14:35:17  customdesigned
+# Packaging tweaks.
+#
+# Revision 1.116  2007/11/01 20:09:14  customdesigned
+# Support temperror policy in access.
+#
+# Revision 1.115  2007/10/10 18:23:54  customdesigned
+# Send quarantine DSN to SPF pass (official or guessed) only.
+# Reject blacklisted email too big for dspam.
+#
+# Revision 1.114  2007/10/10 18:07:50  customdesigned
+# Check porn keywords in From header field.
+#
+# Revision 1.113  2007/09/25 16:37:26  customdesigned
+# Tested on RH7
+#
+# Revision 1.112  2007/09/13 14:51:03  customdesigned
+# Report domain on reputation reject.
+#
+# Revision 1.111  2007/07/25 17:14:59  customdesigned
+# Move milter apps to /usr/lib/pymilter
+#
+# Revision 1.110  2007/07/02 03:06:10  customdesigned
+# Ban ips on bad mailfrom offenses as well as bad rcpts.
+#
+# Revision 1.109  2007/06/23 20:53:05  customdesigned
+# Ban IPs based on too many invalid recipients in a connection.  Requires
+# configuring check_user.  Tighten HELO best_guess policy.
+#
+# Revision 1.108  2007/04/19 16:02:43  customdesigned
+# Do not process valid SRS recipients as delayed_failure.
+#
+# Revision 1.107  2007/04/15 01:01:13  customdesigned
+# Ban ips with too many bad rcpts on a connection.
+#
+# Revision 1.105  2007/04/13 17:20:09  customdesigned
+# Check access_file at startup.  Compress rcpt to log.
+#
+# Revision 1.104  2007/04/05 17:59:07  customdesigned
+# Stop querying gossip server twice.
+#
+# Revision 1.103  2007/04/02 18:37:25  customdesigned
+# Don't disable gossip for temporary error.
+#
+# Revision 1.102  2007/03/30 18:13:41  customdesigned
+# Report bestguess and helo-spf as key-value pairs in Received-SPF
+# instead of in their own headers.
+#
+# Revision 1.101  2007/03/29 03:06:10  customdesigned
+# Don't count DSN and unqualified MAIL FROM as internal_domain.
+#
+# Revision 1.100  2007/03/24 00:30:24  customdesigned
+# Do not CBV for internal domains.
 # Revision 1.99  2007/03/23 22:39:10  customdesigned
 # Get SMTP-Auth policy from access_file.
 #

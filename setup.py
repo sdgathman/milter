@@ -1,19 +1,16 @@
 import os
 import sys
-from distutils.core import setup, Extension
+import setuptools
 
 # Use the spec file to install the machinery to run this as a service.
 # This setup is just used to register.
 
-setup(name = "milter", version = '0.9',
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setuptools.setup(name = "milter", version = '1.0',
 	description="Anti-forgery, reputation tracking, anti-spam milter",
-	long_description="""\
-This is a milter application based on pymilter.  It implements per-domain
-policies and reputation tracking based on SPF result (example.com:PASS tracks a
-different reputation than example.com:NEUTRAL).  It has too many features.  A
-simple SPF checking milter with policy in sendmail access file based on domain
-and SPF result is also included.
-""",
+	long_description=long_description,
 	author="Stuart Gathman",
 	author_email="stuart@bmsi.com",
 	maintainer="Stuart D. Gathman",

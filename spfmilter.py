@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+from __future__ import print_function
 # A simple SPF milter.
 # You must install pyspf for this to work.
 
@@ -12,7 +14,10 @@ import os
 import Milter
 import spf
 import syslog
-import anydbm
+try:
+  from bsddb3 import db as dbm
+except:
+  import anydbm as dbm
 from Milter.config import MilterConfigParser
 from Milter.utils import iniplist,parse_addr,ip4re
 
@@ -27,12 +32,12 @@ class Config(object):
     self.access_file = None
     #os.umask(config.savumask)
 
-def read_config(list):
+def read_config(cfglist):
   "Return new config object."
   cp = MilterConfigParser({
     'access_file_nulls': 'no'
   })
-  cp.read(list)
+  cp.read(cfglist)
   if cp.has_option('milter','datadir'):
         os.chdir(cp.get('milter','datadir'))
   conf = Config()
@@ -42,7 +47,7 @@ def read_config(list):
   conf.internal_connect = cp.getlist('milter','internal_connect')
   conf.untrapped_exception = cp.getdefault('milter','untrapped_exception',
         'CONTINUE')
-  conf.umask = int(cp.getdefault('milter','umask',default='0177'),base=0)
+  conf.umask = int(cp.getdefault('milter','umask',default='0o177'),base=0)
   # SPF options
   if cp.has_option('spf','trusted_forwarder'):
     conf.trusted_forwarder = cp.getlist('spf','trusted_forwarder')
@@ -65,37 +70,43 @@ class SPFPolicy(object):
       self.use_nulls = False
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
-    if access_file:
-      try:
-        acf = anydbm.open(access_file,'r')
-      except:
-        syslog.syslog('%s: Cannot open for reading'%access_file)
-        acf = None
-    else: acf = None
-    self.acf = acf
+    self.acf = None
+    self.access_file = access_file
 
   def close(self):
     if self.acf:
       self.acf.close()
-  def __enter__(self): return self
+
+  def __enter__(self): 
+    self.acf = None
+    if self.access_file:
+      try:
+        self.acf = dbm.open(self.access_file,'r')
+      except:
+        print('%s: Cannot open for reading'%self.access_file)
+        syslog.syslog('%s: Cannot open for reading'%self.access_file)
+    return self
   def __exit__(self,t,v,b): self.close()
 
   def getPolicy(self,pfx):
     acf = self.acf
-    if not acf: return None
+    if not acf:
+      print(self.access_file,'not open')
+      return None
     if self.use_nulls: sfx = '\x00'
     else: sfx = ''
     try:
-      return acf[pfx + self.sender + sfx].rstrip('\x00')
+      print('key=',pfx + '!' + self.sender + sfx)
+      return acf[pfx + '!' + self.sender + sfx].rstrip('\x00')
     except KeyError:
       try:
-        return acf[pfx + self.domain + sfx].rstrip('\x00')
+        return acf[pfx + '!' + self.domain + sfx].rstrip('\x00')
       except KeyError:
         try:
-          return acf[pfx + sfx].rstrip('\x00')
+          return acf[pfx + '!' + sfx].rstrip('\x00')
         except KeyError:
           try:
-            return acf[pfx.rstrip(':') + sfx].rstrip('\x00')
+            return acf[pfx + sfx].rstrip('\x00')
           except KeyError:
             return None
   
@@ -195,7 +206,8 @@ class spfMilter(Milter.Base):
       # Restrict SMTP AUTH users to authorized domains
       authsend = '@'.join((self.user,domain))
       with SPFPolicy(authsend,self.conf) as p:
-        policy = p.getPolicy('smtp-auth:')
+        policy = p.getPolicy('smtp-auth')
+      print('smtp-auth policy:',policy,authsend,self.conf.access_file)
       if policy:
         if policy != 'OK':
           self.log("REJECT: SMTP user",self.user,
@@ -239,8 +251,8 @@ class spfMilter(Milter.Base):
         h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
         hres,hcode,htxt = h.check()
         with SPFPolicy(self.hello_name,self.conf) as hp:
-          policy = hp.getPolicy('helo-%s:'%hres)
-          #print 'helo-%s:%s %s'%(hres,self.hello_name,policy)
+          policy = hp.getPolicy('helo-%s'%hres)
+          #print('helo-%s:%s %s'%(hres,self.hello_name,policy))
           if not policy:
             if hres in ('deny','fail','neutral','softfail'):
               policy = 'REJECT'
@@ -261,7 +273,7 @@ class spfMilter(Milter.Base):
 
     with SPFPolicy(q.s,self.conf) as p:
       if res == 'fail':
-        policy = p.getPolicy('spf-fail:')
+        policy = p.getPolicy('spf-fail')
         if not policy or policy == 'REJECT':
           self.log('REJECT: SPF %s %i %s' % (res,code,txt))
           self.setreply(str(code),'5.7.1',txt)
@@ -270,7 +282,7 @@ class spfMilter(Milter.Base):
           # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
           return Milter.REJECT
       elif res == 'softfail':
-        policy = p.getPolicy('spf-softfail:')
+        policy = p.getPolicy('spf-softfail')
         if policy and policy == 'REJECT':
           self.log('REJECT: SPF %s %i %s' % (res,code,txt))
           self.setreply(str(code),'5.7.1',txt)
@@ -279,7 +291,7 @@ class spfMilter(Milter.Base):
           # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
           return Milter.REJECT
       elif res == 'permerror':
-        policy = p.getPolicy('spf-permerror:')
+        policy = p.getPolicy('spf-permerror')
         if not policy or policy == 'REJECT':
           self.log('REJECT: SPF %s %i %s' % (res,code,txt))
           # latest SPF draft recommends 5.5.2 instead of 5.7.1
@@ -289,13 +301,13 @@ class spfMilter(Milter.Base):
           )
           return Milter.REJECT
       elif res == 'temperror':
-        policy = p.getPolicy('spf-temperror:')
+        policy = p.getPolicy('spf-temperror')
         if not policy or policy == 'REJECT':
           self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
           self.setreply(str(code),'4.3.0',txt)
           return Milter.TEMPFAIL
       elif res == 'neutral' or res == 'none':
-        policy = p.getPolicy('spf-neutral:')
+        policy = p.getPolicy('spf-neutral')
         if policy and policy == 'REJECT':
           self.log('REJECT NEUTRAL:',q.s)
           self.setreply('550','5.7.1',
@@ -303,7 +315,7 @@ class spfMilter(Milter.Base):
             % (receiver,q.s))
           return Milter.REJECT
       elif res == 'pass':
-        policy = p.getPolicy('spf-pass:')
+        policy = p.getPolicy('spf-pass')
         if policy and policy == 'REJECT':
           self.log('REJECT PASS:',q.s)
           self.setreply('550','5.7.1',
@@ -343,4 +355,4 @@ spfmilter startup""" % (miltername,miltername,socketname))
   sys.stdout.flush()
   config.savumask = os.umask(config.umask)
   Milter.runmilter(miltername,socketname,240)
-  print "spfmilter shutdown"
+  print("spfmilter shutdown")

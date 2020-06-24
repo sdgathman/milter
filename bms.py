@@ -1,295 +1,6 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
+from __future__ import print_function
 # A simple milter that has grown quite a bit.
-# $Log$
-# Revision 1.206  2015/09/21 16:39:51  customdesigned
-# Missed check for missing self.dkim_domain
-#
-# Revision 1.205  2015/05/16 22:36:25  customdesigned
-# Pass test cases with access_file_nulls support.
-#
-# Revision 1.204  2015/05/15 02:08:43  customdesigned
-# Log error opening access file.  Support WHITELIST for SMTP-Auth.
-#
-# Revision 1.203  2015/04/13 03:29:37  customdesigned
-# Move more config variables to Config object.  Include added headers
-# in check_spam and quarantine.  Update header triage for pydspam-1.3.
-#
-# Revision 1.202  2014/03/22 19:15:03  customdesigned
-# Fix bandomain with no DKIM
-#
-# Revision 1.201  2014/03/01 05:19:08  customdesigned
-# Release 0.8.18-3
-#
-# Revision 1.200  2013/07/17 21:27:02  customdesigned
-# Add logic to mask IPs or use authenticated domain for greylisting.
-# Should be a config option, however.
-#
-# Revision 1.199  2013/05/15 17:23:41  customdesigned
-# Support DKIM whitelisting
-#
-# Revision 1.198  2013/04/30 23:06:47  customdesigned
-# Add helofail web template failure message and add common template for L&F.
-#
-# Revision 1.197  2013/04/25 18:23:09  customdesigned
-# auto_whitelist, blacklist were loading from wrong directory.
-#
-# Revision 1.196  2013/03/27 02:21:30  customdesigned
-# Recognize IPv6 localhost.
-#
-# Revision 1.195  2013/03/17 17:43:42  customdesigned
-# Default logdir to datadir.
-#
-# Revision 1.194  2013/03/15 23:04:38  customdesigned
-# Move many configs to datadir
-#
-# Revision 1.193  2013/03/12 03:29:55  customdesigned
-# Add SMTP AUTH test case for bms milter.
-#
-# Revision 1.192  2013/03/12 01:33:49  customdesigned
-# Tab nanny
-#
-# Revision 1.191  2013/03/09 23:51:11  customdesigned
-# Move email_providers to config.  Move many other configs to Config object.
-#
-# Revision 1.185  2012/07/13 21:05:57  customdesigned
-# Don't check banned ips on submission port (587).
-#
-# Revision 1.184  2012/05/24 18:26:43  customdesigned
-# Log unknown commands.
-#
-# Revision 1.181  2012/04/19 23:20:05  customdesigned
-# Simple DKIM signing support
-#
-# Revision 1.180  2012/04/12 05:37:25  customdesigned
-# Skip greylisting for trusted forwarders
-#
-# Revision 1.179  2012/02/25 22:21:16  customdesigned
-# Support urls with fuller explanation for rejections.
-#
-# Revision 1.178  2011/11/05 16:05:08  customdesigned
-# Change openspf.org -> openspf.net
-#
-# Revision 1.177  2011/11/01 17:43:33  customdesigned
-# Trust trusted relay not to be a zombie.
-#
-# Revision 1.176  2011/10/03 20:07:16  customdesigned
-# Make wiretap use orig_from (set efrom to orig_from earlier).
-#
-# Revision 1.175  2011/10/03 20:01:00  customdesigned
-# Let NOTIFY suppress real DSN.  Since notify is forged on forged email,
-# perhaps this should be an option.
-#
-# Revision 1.174  2011/10/03 17:44:38  customdesigned
-# Fix SPF fail ip reported for IP6
-#
-# Revision 1.173  2011/06/16 20:54:48  customdesigned
-# Update to pydkim-0.4 and log verified domains
-#
-# Revision 1.172  2011/06/07 22:24:38  customdesigned
-# Remove leftover tempname in envfrom.  Save failed DKIM
-#
-# Revision 1.171  2011/06/07 19:45:01  customdesigned
-# Check DKIM (log only)
-#
-# Revision 1.170  2011/05/18 02:50:54  customdesigned
-# Improve chinese detection
-#
-# Revision 1.169  2011/04/13 19:50:04  customdesigned
-# Move persistent data to /var/lib/milter
-#
-# Revision 1.168  2011/04/01 02:34:38  customdesigned
-# Fix efrom and umis with delayed reject.
-#
-# Revision 1.166  2011/03/05 05:12:55  customdesigned
-# Release 0.8.15
-#
-# Revision 1.165  2011/03/03 21:45:24  customdesigned
-# Extract original MFROM from SRS
-#
-# Revision 1.164  2010/10/27 03:07:33  customdesigned
-# Whitelist recipients from signed MFROM if aborted before DATA.
-#
-# Revision 1.163  2010/10/16 21:23:00  customdesigned
-# Send auto-whitelist recipients to whitelist_mx
-#
-# Revision 1.162  2010/08/18 03:58:06  customdesigned
-# Fix typos
-#
-# Revision 1.161  2010/08/18 03:52:09  customdesigned
-# Update reputation of parsed Received-SPF header if no Gossip header.
-#
-# Revision 1.160  2010/06/04 03:50:28  customdesigned
-# Allow wildcards just above TLD.
-#
-# Revision 1.159  2010/05/27 21:22:41  customdesigned
-# Fix helo policy lookup
-#
-# Revision 1.158  2010/05/27 18:23:33  customdesigned
-# Support HELO policies.
-#
-# Revision 1.157  2010/05/22 03:57:17  customdesigned
-# Bandomain aliases to ban wildcards.
-#
-# Revision 1.155  2010/04/16 19:51:05  customdesigned
-# Max_demerits config to disable banning ips.
-#
-# Revision 1.154  2010/04/09 18:37:53  customdesigned
-# Best guess pass is good enough to get quarrantine DSN or get banned.
-#
-# Revision 1.153  2010/04/09 18:23:34  customdesigned
-# Don't ban just for repeated anonymous MFROM
-#
-# Revision 1.152  2010/02/15 21:02:29  customdesigned
-# Lower reputation bar to avoid greylisting.
-#
-# Revision 1.151  2009/12/31 19:23:18  customdesigned
-# Don't check From unless dspam enabled.
-#
-# Revision 1.150  2009/12/30 20:53:20  customdesigned
-# Require pymilter >= 0.9.3
-#
-# Revision 1.149  2009/09/14 14:59:53  customdesigned
-# Allow illegal HELO from internal to accomodate broken copier firmware.
-#
-# Revision 1.148  2009/09/14 14:28:22  customdesigned
-# Heuristically recognize multiple MXs.
-#
-# Revision 1.147  2009/09/14 14:24:11  customdesigned
-# Trust 127.0.0.1 not to be a zombie
-#
-# Revision 1.146  2009/08/29 03:38:27  customdesigned
-# Don't ban domains unless gossip score available.
-#
-# Revision 1.145  2009/08/27 21:18:16  customdesigned
-# Track banned domains and expand the offenses that can ban an IP.
-#
-# Revision 1.141  2009/05/20 02:48:18  customdesigned
-# Restrict internal DSNs to official MTAs.
-#
-# Revision 1.140  2009/02/04 02:40:14  customdesigned
-# Parse gossip header before add_spam.  Replace nulls in smtp error txt.
-# Default internal_policy flag false.
-#
-# Revision 1.139  2008/12/22 02:34:39  customdesigned
-# Fix internal policy
-#
-# Revision 1.138  2008/12/13 21:22:51  customdesigned
-# Split off pymilter
-#
-# Revision 1.137  2008/12/06 21:13:57  customdesigned
-# Fix some reject messages.
-#
-# Revision 1.136  2008/12/04 19:42:46  customdesigned
-# SPF Pass policy
-#
-# Revision 1.135  2008/10/23 19:58:06  customdesigned
-# Example config had different names than actual code :-)
-#
-# Revision 1.134  2008/10/11 15:45:46  customdesigned
-# Don't greylist DSNs.
-#
-# Revision 1.133  2008/10/09 18:44:54  customdesigned
-# Skip greylisting for good reputation.
-#
-# Revision 1.132  2008/10/09 00:55:13  customdesigned
-# Don't reset greylist timer on early retries.
-#
-# Revision 1.131  2008/10/08 04:57:28  customdesigned
-# Greylisting
-#
-# Revision 1.130  2008/10/02 03:19:00  customdesigned
-# Delay strike3 REJECT and don't reject if whitelisted.
-# Recognize vacation messages as autoreplies.
-#
-# Revision 1.129  2008/09/09 23:24:56  customdesigned
-# Never ban a trusted relay.
-#
-# Revision 1.128  2008/09/09 23:08:16  customdesigned
-# Wasn't reading banned_ips
-#
-# Revision 1.127  2008/08/25 18:32:22  customdesigned
-# Handle missing gossip_node so self tests pass.
-#
-# Revision 1.126  2008/08/18 17:47:57  customdesigned
-# Log rcpt for SRS rejections.
-#
-# Revision 1.125  2008/08/06 00:52:38  customdesigned
-# CBV policy sends no DSN.  DSN policy sends DSN.
-#
-# Revision 1.124  2008/08/05 18:04:06  customdesigned
-# Send quarantine DSN to SPF PASS only.
-#
-# Revision 1.123  2008/07/29 21:59:29  customdesigned
-# Parse ESMTP params
-#
-# Revision 1.122  2008/05/08 21:35:56  customdesigned
-# Allow explicitly whitelisted email from banned_users.
-#
-# Revision 1.121  2008/04/10 14:59:35  customdesigned
-# Configure gossip TTL.
-#
-# Revision 1.120  2008/04/02 18:59:14  customdesigned
-# Release 0.8.10
-#
-# Revision 1.119  2008/04/01 00:13:10  customdesigned
-# Do not CBV whitelisted addresses.  We already know they are good.
-#
-# Revision 1.118  2008/01/09 20:15:49  customdesigned
-# Handle unquoted fullname when parsing email.
-#
-# Revision 1.117  2007/11/29 14:35:17  customdesigned
-# Packaging tweaks.
-#
-# Revision 1.116  2007/11/01 20:09:14  customdesigned
-# Support temperror policy in access.
-#
-# Revision 1.115  2007/10/10 18:23:54  customdesigned
-# Send quarantine DSN to SPF pass (official or guessed) only.
-# Reject blacklisted email too big for dspam.
-#
-# Revision 1.114  2007/10/10 18:07:50  customdesigned
-# Check porn keywords in From header field.
-#
-# Revision 1.113  2007/09/25 16:37:26  customdesigned
-# Tested on RH7
-#
-# Revision 1.112  2007/09/13 14:51:03  customdesigned
-# Report domain on reputation reject.
-#
-# Revision 1.111  2007/07/25 17:14:59  customdesigned
-# Move milter apps to /usr/lib/pymilter
-#
-# Revision 1.110  2007/07/02 03:06:10  customdesigned
-# Ban ips on bad mailfrom offenses as well as bad rcpts.
-#
-# Revision 1.109  2007/06/23 20:53:05  customdesigned
-# Ban IPs based on too many invalid recipients in a connection.  Requires
-# configuring check_user.  Tighten HELO best_guess policy.
-#
-# Revision 1.108  2007/04/19 16:02:43  customdesigned
-# Do not process valid SRS recipients as delayed_failure.
-#
-# Revision 1.107  2007/04/15 01:01:13  customdesigned
-# Ban ips with too many bad rcpts on a connection.
-#
-# Revision 1.105  2007/04/13 17:20:09  customdesigned
-# Check access_file at startup.  Compress rcpt to log.
-#
-# Revision 1.104  2007/04/05 17:59:07  customdesigned
-# Stop querying gossip server twice.
-#
-# Revision 1.103  2007/04/02 18:37:25  customdesigned
-# Don't disable gossip for temporary error.
-#
-# Revision 1.102  2007/03/30 18:13:41  customdesigned
-# Report bestguess and helo-spf as key-value pairs in Received-SPF
-# instead of in their own headers.
-#
-# Revision 1.101  2007/03/29 03:06:10  customdesigned
-# Don't count DSN and unqualified MAIL FROM as internal_domain.
-#
-# Revision 1.100  2007/03/24 00:30:24  customdesigned
-# Do not CBV for internal domains.
 #
 # See ChangeLog
 #
@@ -301,9 +12,20 @@
 import sys
 import os
 import os.path
-import StringIO
+import ipaddress
+try:
+  from io import BytesIO
+  from email import errors
+  from email.message import Message
+  from email.utils import getaddresses
+  import dbm
+except:
+  from StringIO import StringIO as BytesIO
+  from email import Errors as errors
+  from email.Message import Message
+  from email.Utils import getaddresses
+  import anydbm as dbm
 import mime
-import email.Errors
 import Milter
 import tempfile
 import time
@@ -311,7 +33,6 @@ import socket
 import re
 import shutil
 import gc
-import anydbm
 import smtplib
 import urllib
 import Milter.dsn as dsn
@@ -322,9 +43,7 @@ from Milter.config import MilterConfigParser
 from Milter.greysql import Greylist
 
 from fnmatch import fnmatchcase
-from email.Utils import getaddresses
 from glob import glob
-from ipaddr import IPNetwork
 
 # Import gossip if available
 try:
@@ -400,11 +119,23 @@ class Config(object):
       'googlegroups.com', 'att.net', 'nokiamail.com'
     )
     self.access_file = None
+    ## List of executable extensions to be removed from incoming emails
+    # Executable email attachments is the most common Windows malware
+    # vector in my experience.
+    self.banned_exts = mime.extlist.split(',')
+    ## Option to block subjects with chinese characters.
+    # This does not prevent corresponding with Chinese people,
+    # or block Chinese in other parts of the email.  Chinese
+    # chars in the subject sent to someone who does not speak the language
+    # is almost certainly spam.
+    self.block_chinese = False
     ## URL of CGI to display enhanced error diagnostics via web.
     self.errors_url = "http://bmsi.com/cgi-bin/errors.cgi"
     self.dkim_domain = None
     self.dkim_key = None
     self.dkim_selector = 'default'
+    ## List of networks considered internal.
+    self.internal_connect = ()
     ## Banned case sensitive Subject keywords 
     self.spam_words = ()
     ## Banned case insensitive Subject keywords 
@@ -423,6 +154,8 @@ class Config(object):
     self.log_headers = False
     ## Data directory, or '' to use logdir
     self.datadir = ''
+    ## Option to heuristically guess a sender policy for domains lacking one.
+    self.spf_best_guess = False
     ## Socket for talking to MTA as proto:address
     # If proto is missing, it defaults to unix domain socket.
     # Examples:
@@ -441,6 +174,15 @@ class Config(object):
     # went wrong and abort the connection.  This is currently also used 
     # when sending DSNs.
     self.timeout = 600
+    ## List of non-SRS domains that can be trusted to forward to us.
+    # If the connectip gets an SPF Pass with any of these domains,
+    # we treat the email as SPF Pass for the forwarder domain.
+    # Don't make this list too long, as this is an inefficient process.
+    self.trusted_forwarder = ()
+    ## List of trusted relays such as MX hosts for our domain.
+    # Connections from a trusted relay can trust the first Received header.
+    # SPF checks are bypassed for internal connections and trusted relays.
+    self.trusted_relay = ()
     ## True to continue until DATA when a REJECT decision is made.
     # This allows logging intended recipients, which can be very useful.
     self.delayed_reject = True
@@ -499,17 +241,12 @@ _archive_lock = None
 check_user = {}
 block_forward = {}
 hide_path = ()
-block_chinese = False
-banned_exts = mime.extlist.split(',')
 scan_zip = False
 scan_html = True
 scan_rfc822 = True
 internal_policy = False
-internal_connect = ()
-trusted_relay = ()
 private_relay = ()
 internal_mta = ()
-trusted_forwarder = ()
 internal_domains = ()
 dspam_dict = None
 dspam_users = {}
@@ -528,7 +265,6 @@ srs_domain = ()
 spf_reject_neutral = ()
 spf_accept_softfail = ()
 spf_accept_fail = ()
-spf_best_guess = False
 spf_reject_noptr = False
 supply_sender = False
 banned_ips = set()
@@ -580,21 +316,21 @@ def read_config(list):
   config.logdir = cp.getdefault('milter','logdir',config.datadir)
   # config reference files are in datadir by default
   if config.datadir:
-      print "chdir:",config.datadir
+      print("chdir:",config.datadir)
       os.chdir(config.datadir)
 
   # milter section
   tempfile.tempdir = cp.get('milter','tempdir')
   global check_user
-  global internal_connect, internal_domains, trusted_relay
+  global  internal_domains
   global private_relay, internal_mta, max_demerits
   config.socketname = cp.get('milter','socket')
   config.timeout = cp.getintdefault('milter','timeout',600)
   check_user = cp.getaddrset('milter','check_user')
   config.log_headers = cp.getboolean('milter','log_headers')
-  internal_connect = cp.getlist('milter','internal_connect')
+  config.internal_connect = cp.getlist('milter','internal_connect')
   internal_domains = cp.getlist('milter','internal_domains')
-  trusted_relay = cp.getlist('milter','trusted_relay')
+  config.trusted_relay = cp.getlist('milter','trusted_relay')
   private_relay = cp.getlist('milter','private_relay')
   internal_mta = cp.getlist('milter','internal_mta')
   config.hello_blacklist = cp.getlist('milter','hello_blacklist')
@@ -605,19 +341,18 @@ def read_config(list):
     config.email_providers = cp.get('milter','email_providers')
 
   # defang section
-  global scan_rfc822, scan_html, block_chinese, scan_zip, block_forward
-  global banned_exts
+  global scan_rfc822, scan_html, scan_zip, block_forward
   if cp.has_section('defang'):
     section = 'defang'
     # for backward compatibility,
     # banned extensions defaults to empty only when defang section exists
-    banned_exts = cp.getlist(section,'banned_exts')
+    config.banned_exts = cp.getlist(section,'banned_exts')
   else: # use milter section if no defang section for compatibility
     section = 'milter'
   scan_rfc822 = cp.getboolean(section,'scan_rfc822')
   scan_zip = cp.getboolean(section,'scan_zip')
   scan_html = cp.getboolean(section,'scan_html')
-  block_chinese = cp.getboolean(section,'block_chinese')
+  config.block_chinese = cp.getboolean(section,'block_chinese')
   block_forward = cp.getaddrset(section,'block_forward')
   config.porn_words = [x for x in cp.getlist(section,'porn_words') 
         if len(x) > 1]
@@ -648,7 +383,7 @@ def read_config(list):
   for sa,v in [
       (k,cp.get('wiretap',k)) for k in cp.getlist('wiretap','smart_alias')
     ] + (cp.has_section('smart_alias') and cp.items('smart_alias',True) or []):
-    print sa,v
+    print(sa,v)
     sm = [q.strip() for q in v.split(',')]
     if len(sm) < 2:
       milter_log.warning('malformed smart alias: %s',sa)
@@ -678,19 +413,18 @@ def read_config(list):
     dspam_sizelimit = cp.getint('dspam','dspam_sizelimit')
 
   # spf section
-  global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
+  global spf_reject_neutral,SRS,spf_reject_noptr
   global spf_accept_softfail,spf_accept_fail,supply_sender
-  global trusted_forwarder
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')
     spf_accept_softfail = cp.getlist('spf','accept_softfail')
     spf_accept_fail = cp.getlist('spf','accept_fail')
-    spf_best_guess = cp.getboolean('spf','best_guess')
+    config.spf_best_guess = cp.getboolean('spf','best_guess')
     spf_reject_noptr = cp.getboolean('spf','reject_noptr')
     supply_sender = cp.getboolean('spf','supply_sender')
     config.access_file = cp.getdefault('spf','access_file')
-    trusted_forwarder = cp.getlist('spf','trusted_forwarder')
+    config.trusted_forwarder = cp.getlist('spf','trusted_forwarder')
   srs_config = cp.getdefault('srs','config')
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
@@ -758,7 +492,7 @@ def read_config(list):
   return config
 
 def maskip(ip):
-  n = IPNetwork(ip)
+  n = ipaddress.ip_network(ip)
   if n.version == 4:
     hostbits = 8
   else:
@@ -769,20 +503,21 @@ def findsrs(fp):
   lastln = None
   for ln in fp:
     if lastln:
-      if ln[0].isspace() and ln[0] != '\n':
+      c = chr(ln[0])
+      if c.isspace() and c != '\n':
         lastln += ln
         continue
       try:
         name,val = lastln.rstrip().split(None,1)
-        pos = val.find('<SRS')
+        pos = val.find(b'<SRS')
         if pos >= 0:
-          end = val.find('>',pos+4)
-          return srs.reverse(val[pos+1:end])
+          end = val.find(b'>',pos+4)
+          return srs.reverse(val[pos+1:end].decode())
       except: pass
     lnl = ln.lower()
-    if lnl.startswith('action:'):
-      if lnl.split()[-1] != 'failed': break
-    for k in ('message-id:','x-mailer:','sender:','references:'):
+    if lnl.startswith(b'action:'):
+      if lnl.split()[-1] != b'failed': break
+    for k in (b'message-id:',b'x-mailer:',b'sender:',b'references:'):
       if lnl.startswith(k):
         lastln = ln
         break
@@ -811,7 +546,7 @@ class SPFPolicy(object):
     access_file = config.access_file
     if access_file:
       try:
-        acf = anydbm.open(access_file,'r')
+        acf = dbm.open(access_file,'r')
       except Exception as x:
         acf = None
         milter_log.error("%s: %%s"%access_file,x,exc_info=True)
@@ -904,7 +639,11 @@ def isbanned(dom,s):
   if len(a) < 2: return False
   a[0] = '*'
   return isbanned('.'.join(a),s)
+
 RE_MULTIMX = re.compile(r'^(mail|smtp|mx)[0-9]{1,3}[.]')
+
+def write_header(fp,name,val):
+  fp.write(b"%s: %s\n" % (name.encode(),val.encode('utf-8')))
 
 class bmsMilter(Milter.Base):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
@@ -997,10 +736,11 @@ class bmsMilter(Milter.Base):
     else:
       self.dport = 0
     if hostaddr and len(hostaddr) > 0:
+      config = self.config
       ipaddr = hostaddr[0]
-      if iniplist(ipaddr,internal_connect):
+      if iniplist(ipaddr,config.internal_connect):
         self.internal_connection = True
-      if iniplist(ipaddr,trusted_relay):
+      if iniplist(ipaddr,config.trusted_relay):
         self.trusted_relay = True
     else: ipaddr = ''
     self.connectip = ipaddr
@@ -1077,7 +817,7 @@ class bmsMilter(Milter.Base):
       else:
         cf0 = cf
       for key in ((cf,ct),(cf0,ct)):
-        if smart_alias.has_key(key):
+        if key in smart_alias:
           self.del_recipient(to)
           for t in smart_alias[key]:
             self.add_recipient('<%s>'%t)
@@ -1091,7 +831,8 @@ class bmsMilter(Milter.Base):
         ip = addr2bin(self.connectip)
         if ip not in banned_ips:
           banned_ips.add(ip)
-          print >>open('banned_ips','a'),self.connectip
+          with open('banned_ips','at') as fp:
+            print(self.connectip,file=fp)
           self.log("BANNED IP:",self.connectip)
       except: pass
     return Milter.REJECT
@@ -1104,8 +845,8 @@ class bmsMilter(Milter.Base):
     #param = param2dict(str)
     #self.envid = param.get('ENVID',None)
     #self.mail_param = param
-    self.fp = StringIO.StringIO()
-    self.pristine_headers = StringIO.StringIO()
+    self.fp = BytesIO()
+    self.pristine_headers = BytesIO()
     self.enhanced_headers = []
     if self.tempname:
       os.remove(self.tempname)  # remove any leftover from previous message
@@ -1204,7 +945,8 @@ class bmsMilter(Milter.Base):
         self.log("REJECT CANCELED")
         self.reject = None
 
-    self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
+    From = 'From %s %s\n' % (self.canon_from,time.ctime())
+    self.fp.write(From.encode('utf-8'))
     self.internal_domain = False
     self.umis = None
     if len(t) == 2:
@@ -1307,7 +1049,7 @@ class bmsMilter(Milter.Base):
     res = self.spf and self.spf_guess
     hres = self.spf and self.spf_helo
     # Check whitelist and blacklist
-    if auto_whitelist.has_key(self.efrom):
+    if self.efrom in auto_whitelist:
       self.greylist = False
       if res == 'pass' or self.trusted_relay:
         self.whitelist = True
@@ -1317,7 +1059,7 @@ class bmsMilter(Milter.Base):
         self.log("PROBATION",self.efrom)
       if res not in ('permerror','softfail'):
         self.cbv_needed = None
-    elif cbv_cache.has_key(self.efrom) and cbv_cache[self.efrom] \
+    elif self.efrom in cbv_cache and cbv_cache[self.efrom] \
         or self.efrom in blacklist:
       # FIXME: don't use cbv_cache for blacklist if policy is 'OK'
       if not self.internal_connection:
@@ -1390,7 +1132,8 @@ class bmsMilter(Milter.Base):
 
   def check_spf(self):
     receiver = self.receiver
-    for tf in trusted_forwarder:
+    config = self.config
+    for tf in config.trusted_forwarder:
       q = spf.query(self.connectip,'',tf,receiver=receiver,strict=False)
       res,code,txt = q.check()
       if res == 'none':
@@ -1457,7 +1200,7 @@ class bmsMilter(Milter.Base):
 	    template='helofail',mfrom=self.efrom,
 	    helo=self.hello_name,ip=self.connectip
           )
-        if hres == 'none' and spf_best_guess \
+        if hres == 'none' and config.spf_best_guess \
           and not dynip(self.hello_name,self.connectip):
           # HELO must match more exactly.  Don't match PTR or zombies
           # will be able to get a best_guess pass on their ISPs domain.
@@ -1469,7 +1212,7 @@ class bmsMilter(Milter.Base):
         # we don't accept our own domains externally without an SPF record
         self.log('REJECT: spam from self',q.o)
         return self.delay_reject('550','5.7.1',"I hate talking to myself!")
-      if spf_best_guess and res == 'none':
+      if config.spf_best_guess and res == 'none':
         #self.log('SPF: no record published, guessing')
         q.set_default_explanation(
                 'SPF guess: see http://openspf.net/why.html')
@@ -1685,6 +1428,7 @@ class bmsMilter(Milter.Base):
 
   # Heuristic checks for spam headers
   def check_header(self,name,val):
+    print("check_header: name,val =",name,val)
     config = self.config
     lname = name.lower()
     # val is decoded header value
@@ -1698,7 +1442,7 @@ class bmsMilter(Milter.Base):
           return Milter.REJECT
 
       # even if we wanted the Taiwanese spam, we can't read Chinese
-      if block_chinese:
+      if config.block_chinese:
         if not inCharSets(val,'iso-8859-1'):
           self.log('REJECT: %s: %s' % (name,val))
           self.setreply('550','5.7.1',"We don't understand that charset")
@@ -1821,10 +1565,8 @@ class bmsMilter(Milter.Base):
           a = domain.split('.')[wild:]
           if len(a) > 1: domain = '*.'+'.'.join(a)
         self.log('BAN DOMAIN:',domain)
-      try:
-        fp = open('banned_domains','at')
-        print >>fp,domain 
-      finally: fp.close()
+      with open('banned_domains','at') as fp:
+        print(domain,file=fp)
       banned_domains.add(domain)
     return Milter.REJECT
 
@@ -1878,12 +1620,11 @@ class bmsMilter(Milter.Base):
     # Keep both decoded and pristine headers.  DKIM needs pristine headers.
     if self.fp:
       try:
-        val = val.encode('iso-8859-1')
+        write_header(self.fp,name,val)     # add decoded header to buffer
       except:
-        val = hval
-      self.fp.write("%s: %s\n" % (name,val))    # add decoded header to buffer
+        write_header(self.fp,name,hval)     # add decoded header to buffer
       self.enhanced_headers.append((name,val))
-      self.pristine_headers.write("%s: %s\n" % (name,hval))
+      write_header(self.pristine_headers,name,hval)
     return Milter.CONTINUE
 
   ## Get email text exactly as it came from the MTA.
@@ -1892,7 +1633,7 @@ class bmsMilter(Milter.Base):
   # DKIM on the other hand, needs pristine headers to compute the message hash.
   def get_pristine_txt(self):
     self.fp.seek(self.body_start)
-    return self.pristine_headers.getvalue()+'\n'+self.fp.read()
+    return self.pristine_headers.getvalue()+b'\n'+self.fp.read()
 
   ## Get email text with original headers unobfuscated.
   def get_decoded_txt(self):
@@ -1912,13 +1653,13 @@ class bmsMilter(Milter.Base):
     if self.data() == Milter.REJECT:
       return Milter.REJECT
     for name,val,idx in self.new_headers:
-      self.fp.write("%s: %s\n" % (name,val))    # add new headers to buffer
-    self.fp.write("\n")                         # terminate headers
+      write_header(self.fp,name,val)            # add new headers to buffer
+    self.fp.write(b'\n')                        # terminate headers
     if not self.internal_connection:
       msg = None        # parse headers only if needed
       if not self.delayed_failure:
         self.fp.seek(0)
-        msg = email.message_from_file(self.fp)
+        msg = mime.message_from_file(self.fp)
         if msg.get_param('report-type','').lower() == 'delivery-status':
           self.is_bounce = True
           self.delayed_failure = msg.get('subject','DSN')
@@ -1926,7 +1667,7 @@ class bmsMilter(Milter.Base):
       if supply_sender and self.mailfrom != '<>':
         if not msg:
           self.fp.seek(0)
-          msg = email.message_from_file(self.fp)
+          msg = mime.message_from_file(self.fp)
         mf_domain = self.canon_from.split('@')[-1]
         for rn,hf in getaddresses(msg.get_all('from',[])
                 + msg.get_all('sender',[])):
@@ -1978,7 +1719,7 @@ class bmsMilter(Milter.Base):
       if self.fp:
         self.fp.write(chunk)      # IOError causes TEMPFAIL in milter
         self.bodysize += len(chunk)
-    except Exception,x:
+    except Exception as x:
       if not self.ioerr:
         self.ioerr = x
         self.log(x)
@@ -2013,7 +1754,7 @@ class bmsMilter(Milter.Base):
     # don't let a tricky virus slip one past us
     if scan_rfc822:
       msg = msg.get_submsg()
-      if isinstance(msg,email.Message.Message):
+      if isinstance(msg,Message):
         return mime.check_attachments(msg,self._chk_attach)
     return Milter.CONTINUE
 
@@ -2033,7 +1774,7 @@ class bmsMilter(Milter.Base):
   # 
   def gossip_header(self):
     "Set UMIS from GOSSiP header."
-    msg = email.message_from_file(self.fp)
+    msg = mime.message_from_file(self.fp)
     gh = msg.get_all('x-gossip')
     if gh:
       self.log('X-GOSSiP:',gh[0])
@@ -2118,7 +1859,7 @@ class bmsMilter(Milter.Base):
     ds.headerchange = self._headerChange
     modified = False
     for rcpt in self.recipients:
-      if dspam_users.has_key(rcpt.lower()):
+      if rcpt.lower() in dspam_users:
         user = dspam_users.get(rcpt.lower())
         if user:
           try:
@@ -2143,7 +1884,7 @@ class bmsMilter(Milter.Base):
                       for p in r.properties:
                         if p.type == 'header' and p.name == 'd':
                           self.dkim_domain = p.value
-                except Exception,x:
+                except Exception as x:
                   self.log("ext_dkim:",x)
                   milter_log.error("ext_dkim: %s",x,exc_info=True)
             if user == 'bandom' and self.internal_connection:
@@ -2171,7 +1912,7 @@ class bmsMilter(Milter.Base):
               if sender:
                 self.log("FP: %s" % sender)     # log user for FP
                 txt = ds.false_positive(sender,txt)
-                self.fp = StringIO.StringIO(txt)
+                self.fp = BytesIO(txt)
                 self.gossip_header()
                 self.delrcpt('<%s>' % rcpt)
                 self.recipients = None
@@ -2198,7 +1939,7 @@ class bmsMilter(Milter.Base):
                   if self.spf and self.mailfrom != '<>':
                     # check that sender accepts quarantine DSN
                     if self.spf_guess == 'pass':
-                      msg = mime.message_from_file(StringIO.StringIO(txt))
+                      msg = mime.message_from_file(BytesIO(txt))
                       rc = self.send_dsn(self.spf,msg,'quarantine',fail=True)
                       del msg
                     else:
@@ -2234,9 +1975,9 @@ class bmsMilter(Milter.Base):
                 self.log("DSPAM:",user,rcpt)
                 self.fp = None
                 return Milter.DISCARD
-              self.fp = StringIO.StringIO(txt)
+              self.fp = BytesIO(txt)
               modified = True
-          except Exception,x:
+          except Exception as x:
             self.log("check_spam:",x)
             milter_log.error("check_spam: %s",x,exc_info=True)
     # screen if no recipients are dspam_users
@@ -2427,7 +2168,7 @@ class bmsMilter(Milter.Base):
 
       # filter leaf attachments through _chk_attach
       assert not msg.ismodified()
-      self.bad_extensions = ['.' + x for x in banned_exts]
+      self.bad_extensions = ['.' + x for x in config.banned_exts]
       rc = mime.check_attachments(msg,self._chk_attach)
     except:     # milter crashed trying to analyze mail, do some diagnostics
       exc_type,exc_value = sys.exc_info()[0:2]
@@ -2442,7 +2183,7 @@ class bmsMilter(Milter.Base):
       fname = tempfile.mktemp(".fail")  # save message that caused crash
       os.rename(self.tempname,fname)
       self.tempname = None
-      if exc_type == email.Errors.BoundaryError:
+      if exc_type == errors.BoundaryError:
         milter_log.warn("MALFORMED: %s",fname)  # log filename
         if self.internal_connection:
           # accept anyway for now
@@ -2451,7 +2192,7 @@ class bmsMilter(Milter.Base):
         self.setreply('554','5.7.7',
                 'Boundary error in your message, are you a spammer?')
         return Milter.REJECT
-      if exc_type == email.Errors.HeaderParseError:
+      if exc_type == errors.HeaderParseError:
         milter_log.warn("MALFORMED: %s",fname)  # log filename
         self.setreply('554','5.7.7',
                 'Header parse error in your message, are you a spammer?')
@@ -2488,7 +2229,7 @@ class bmsMilter(Milter.Base):
             try:
               self.send_rcpt(mx,whitelisted)
               self.log('Tell MX:',mx)
-            except Exception,x:
+            except Exception as x:
               self.log('Tell MX:',mx,x)
 
     self.apply_headers()
@@ -2555,7 +2296,7 @@ class bmsMilter(Milter.Base):
       out.seek(0)
       # Since we wrote headers with '\n' (no CR),
       # the following header/body split should always work.
-      msg = out.read().split('\n\n',1)[-1]
+      msg = out.read().split(b'\n\n',1)[-1]
       self.replacebody(msg)     # feed modified message to sendmail
       if spam_checked: 
         if gossip and self.umis:
@@ -2597,7 +2338,7 @@ class bmsMilter(Milter.Base):
     else:
       try:
         self.setreply(code,xcode,*msg)
-      except ValueError,x:
+      except ValueError as x:
         self.log(x)
 
   def send_dsn(self,q,msg=None,template_name=None,fail=False):
@@ -2609,7 +2350,7 @@ class bmsMilter(Milter.Base):
       sender = 'postmaster@'+q.h
     else:
       sender = q.s
-    cached = cbv_cache.has_key(sender)
+    cached = sender in cbv_cache
     if cached:
       self.log('CBV:',sender,'(cached)')
       res = cbv_cache[sender]
@@ -2637,7 +2378,8 @@ class bmsMilter(Milter.Base):
             m.add_header('X-Mailer','"Python Milter" <%s>'%msgid)
           m.add_header('Sender','"Python Milter" <%s>'%msgid)
         m = m.as_string()
-        print >>open(template_name+'.last_dsn','w'),m
+        with open(template_name+'.last_dsn','wt') as fp:
+          fp.write(m)
       # if missing template, do plain CBV
       res = dsn.send_dsn(sender,self.receiver,m,timeout=self.config.timeout)
     if res:
@@ -2674,7 +2416,7 @@ class bmsMilter(Milter.Base):
 def main():
   if config.access_file:
     try:
-      acf = anydbm.open(config.access_file,'r')
+      acf = dbm.open(config.access_file,'r')
       acf.close()
     except:
       milter_log.error('Unable to read: %s',config.access_file)
@@ -2682,7 +2424,7 @@ def main():
   # Banned ips and domains, and anything we forgot, are still in logdir
   # (And logdir and datadir are the same for old configs.)
   if config.logdir:
-      print "chdir:",config.logdir
+      print("chdir:",config.logdir)
       os.chdir(config.logdir)
 
   cbv_cache.load('send_dsn.log',age=30)
@@ -2694,7 +2436,7 @@ def main():
     banned_ips = set(addr2bin(ip) 
         for fn in glob('banned_ips*')
         for ip in open(fn))
-    print len(banned_ips),'banned ips'
+    print(len(banned_ips),'banned ips')
   except:
     milter_log.exception('Error reading banned_ips')
 
@@ -2703,17 +2445,17 @@ def main():
     banned_domains = set(dom.strip()
 	    for fn in glob('banned_domains*')
 	    for dom in open(fn))
-    print len(banned_domains),'banned domains'
+    print(len(banned_domains),'banned domains')
   except:
     milter_log.exception('Error reading banned_domains')
 
   greylist = config.getGreylist()
   if greylist:
-    print "Expired %d greylist records." % greylist.clean()
+    print("Expired %d greylist records." % greylist.clean())
     greylist.close()
 
   if config.from_words:
-    print "%d from words banned" % len(config.from_words)
+    print("%d from words banned" % len(config.from_words))
 
   Milter.factory = bmsMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS

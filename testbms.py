@@ -4,8 +4,10 @@ import Milter
 import bms
 from Milter.test import TestBase
 import mime
-import rfc822
-import StringIO
+try:
+  from io import BytesIO
+except:
+  from StringIO import BytesIO
 import email
 import sys
 #import pdb
@@ -64,7 +66,7 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
-    open('test/'+fname+".tstout","w").write(fp.getvalue())
+    with open('test/'+fname+".tstout","wb") as f: f.write(fp.getvalue())
     #self.failUnless(fp.getvalue() == open("test/virus1.out","r").read())
     fp.seek(0)
     msg = mime.message_from_file(fp)
@@ -80,7 +82,7 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.ACCEPT)
     self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
     fp = milter._body
-    open('test/'+fname+".tstout","w").write(fp.getvalue())
+    with open('test/'+fname+".tstout","wb") as f: f.write(fp.getvalue())
     milter.connect('pro-send.com')
     rc = milter.feedMsg('spam8')
     self.assertEqual(rc,Milter.ACCEPT)
@@ -103,14 +105,14 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
-    open("test/virus3.tstout","w").write(fp.getvalue())
+    with open("test/virus3.tstout","wb") as f: f.write(fp.getvalue())
     #self.failUnless(fp.getvalue() == open("test/virus3.out","r").read())
     rc = milter.feedMsg("virus6")
     self.assertEqual(rc,Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     self.failUnless(milter._headerschanged,"Message headers not adjusted")
     fp = milter._body
-    open("test/virus6.tstout","w").write(fp.getvalue())
+    with open("test/virus3.tstout","wb") as f: f.write(fp.getvalue())
     milter.close()
 
   def testDefang3(self):
@@ -121,20 +123,20 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
-    open("test/amazon.tstout","w").write(fp.getvalue())
+    with open("test/amazon.tstout","wb") as f: f.write(fp.getvalue())
     # test defanging Klez virus
     rc = milter.feedMsg("virus13")
     self.assertEqual(rc,Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
-    open("test/virus13.tstout","w").write(fp.getvalue())
+    with open("test/virus13.tstout","wb") as f: f.write(fp.getvalue())
     # test script removal on quoted-printable HTML attachment
     # sgmllib can't handle the <![if cond]> syntax
     rc = milter.feedMsg('spam44')
     self.assertEqual(rc,Milter.ACCEPT)
     self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
-    open("test/spam44.tstout","w").write(fp.getvalue())
+    with open("test/spam44.tstout","wb") as f: f.write(fp.getvalue())
     milter.close()
  
   def testRFC822(self):
@@ -149,20 +151,20 @@ class BMSMilterTestCase(unittest.TestCase):
       self.failUnless(milter._bodyreplaced,"Message body not replaced")
     #self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
-    open("test/test8.tstout","w").write(fp.getvalue())
+    with open("test/test8.tstout","wb") as f: f.write(fp.getvalue())
     rc = milter.feedMsg('virus7')
     self.assertEqual(rc,Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     #self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
-    open("test/virus7.tstout","w").write(fp.getvalue())
+    with open("test/virus7.tstout","wb") as f: f.write(fp.getvalue())
 
   def testSmartAlias(self):
     milter = TestMilter()
     milter.connect('testSmartAlias')
     # test smart alias feature
     key = ('foo@example.com','baz@bat.com')
-    bms.smart_alias[key] = ['ham@eggs.com']
+    bms.config.smart_alias[key] = ['ham@eggs.com']
     rc = milter.feedMsg('test8',key[0],key[1])
     self.assertEqual(rc,Milter.ACCEPT)
     self.failUnless(milter._delrcpt == ['<baz@bat.com>'])
@@ -186,7 +188,7 @@ class BMSMilterTestCase(unittest.TestCase):
     #self.failUnless(milter._bodyreplaced,"Message body not replaced")
     self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
-    open("test/bound.tstout","w").write(fp.getvalue())
+    with open("test/bound.tstout","wb") as f: f.write(fp.getvalue())
 
   def testCompoundFilename(self):
     milter = TestMilter()
@@ -198,15 +200,15 @@ class BMSMilterTestCase(unittest.TestCase):
     #self.failUnless(milter._bodyreplaced,"Message body not replaced")
     self.failIf(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
-    open("test/test1.tstout","w").write(fp.getvalue())
+    with open("test/test1.tstout","wb") as f: f.write(fp.getvalue())
 
   def testFindsrs(self):
     if not bms.srs:
       import SRS
       bms.srs = SRS.new(secret='test')
     sender = bms.srs.forward('foo@bar.com','mail.example.com')
-    sndr = bms.findsrs(StringIO.StringIO(
-"""Received: from [1.16.33.86] (helo=mail.example.com)
+    sndr = bms.findsrs(BytesIO(
+b"""Received: from [1.16.33.86] (helo=mail.example.com)
 	by bastion4.mail.zen.co.uk with smtp (Exim 4.50) id 1H3IBC-00013b-O9
 	for foo@bar.com; Sat, 06 Jan 2007 20:30:17 +0000
 X-Mailer: "PyMilter-0.8.5"
@@ -215,7 +217,7 @@ MIME-Version: 1.0
 Content-Type: text/plain
 To: foo@bar.com
 From: postmaster@mail.example.com
-""" % sender
+""" % sender.encode()
     ))
     self.assertEqual(sndr,'foo@bar.com')
 
@@ -245,8 +247,8 @@ if __name__ == '__main__':
     for fname in sys.argv[1:]:
       milter = TestMilter()
       milter.connect('main')
-      fp = open(fname,'r')
-      rc = milter.feedFile(fp)
+      with open(fname,'rb') as fp:
+        rc = milter.feedFile(fp)
       fp = milter._body
       sys.stdout.write(fp.getvalue())
   else:

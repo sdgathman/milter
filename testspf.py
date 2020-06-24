@@ -1,4 +1,5 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python3
+from __future__ import print_function
 import unittest
 import Milter
 import spfmilter
@@ -11,7 +12,7 @@ zonedata = { }
 
 def DNSLookup(name,qtype,strict=True,timeout=None):
   try:
-    #print name,qtype
+    #print(name,qtype)
     timeout = True
 
     # emulate pydns-2.3.0 label processing
@@ -38,8 +39,10 @@ def DNSLookup(name,qtype,strict=True,timeout=None):
       # keep test zonedata human readable, but translate to simulate pydns
       if t == 'AAAA':
         v = spf.inet_pton(v)
-      elif type(v) == unicode:
-        v = v.encode('utf-8')
+      else:
+        try:
+          v = v.encode('utf-8')
+        except: pass
       yield ((name,t),v)
   except KeyError:
     if name.startswith('error.'):
@@ -52,7 +55,7 @@ class TestMilter(TestBase,spfmilter.spfMilter):
     TestBase.__init__(self)
     spfmilter.config = spfmilter.read_config(['test/spfmilter.cfg'])
     spfmilter.spfMilter.__init__(self)
-    #self.setsymval('j','test.milter.org')
+    self.setsymval('j','test.milter.org')
 
 zonedata = {
   'example.com': [
@@ -187,6 +190,7 @@ class SPFMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.CONTINUE)
     # Try a user *not* authorized to use example.com
     milter.setsymval('{auth_authen}','bad')
+    self.assertEqual(milter.getsymval('{auth_authen}'),'bad')
     rc = milter.connect('mail.example.com',ip='192.0.2.1')
     self.assertEqual(rc,Milter.CONTINUE)
     rc = milter.feedMsg('test1',sender='good@example.com')
@@ -200,7 +204,7 @@ class SPFMilterTestCase(unittest.TestCase):
     milter.close()
 
   def testUmask(self):
-    self.assertEqual(spfmilter.config.umask,0117)
+    self.assertEqual(spfmilter.config.umask,0o177)
 
 def suite(): 
   s = unittest.makeSuite(SPFMilterTestCase,'test')
@@ -213,10 +217,12 @@ if __name__ == '__main__':
   if os.access('test/access',os.R_OK):
     if not os.path.exists('test/access.db') or \
         os.path.getmtime('test/access') > os.path.getmtime('test/access.db'):
-      cmd = 'makemap hash test/access.db <test/access'
-      print cmd
-      os.system(cmd)
+      cmd = 'tr : ! <test/access | makemap hash test/access.db'
+      print(cmd)
+      if os.system(cmd):
+        print('failed!')
+        os.exit(1)
   else:
-    print "Missing test/access"
+    print("Missing test/access")
     os.exit(1)
   unittest.TextTestRunner().run(suite())
