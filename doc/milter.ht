@@ -4,7 +4,7 @@ Author-Email: stuart@gathman.org
 
 <!-- This is part of the Python Milter Applications documentation.
  Copyright (C) 2001,2002,2003,2004,2005-2013 Business Management Systems, Inc.
- Copyright (C) 2013-2018 Stuart D. Gathman
+ Copyright (C) 2013-2020 Stuart D. Gathman
  See the file license.ht for copying conditions.  -->
 
 <P ALIGN="CENTER"><A HREF="http://www.anybrowser.org/campaign/">
@@ -28,11 +28,11 @@ This web page is written by Stuart D. Gathman<br>and<br> originally sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
 (see <a href="license.html">LICENSE</a> for copying permissions for this
 documentation)<br>
-Last updated Jan  2, 2019</h4>
+Last updated Jun 24, 2020</h4>
 <table rules="none">
 <tr><td>
 <img src="art/Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
-Mascot by students of <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
+<br>Mascot by students of <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
 </td>
 <td>
 
@@ -68,6 +68,8 @@ for Postfix in Python.
 <h3> What's New </h3>
 
 <ul>
+<li> pymilter 1.0.5 add header_bytes and @decode decorator (unreleased)
+<li> pymilter 1.0.4 more python3 fixes, but still tested on py2
 <li> pymilter 1.0.3 adds a new textctx milter testing framework
 <li> pymilter 1.0.2 add python3 support and moves development to 
 <a href="https://github.com/sdgathman/pymilter">Github</a>.
@@ -120,7 +122,7 @@ package by annotating callback methods with @nocallback or @noreply.
 
 <ul>
 <li> <a href="https://gathman.org/mailman/listinfo/pymilter">pymilter mailing list</a>
-<li> <a href="http://www.openspf.net/Forums">SPF forums and chat</a> for SPF questions
+<li> <a href="http://www.open-spf.org/Forums">SPF forums and chat</a> for SPF questions
 <li> IRC channel: <b>#dkim</b> on irc.perl.org for DKIM questions
 <li> IRC channel: <b>#pymilter</b> on irc.freenode.net for pymilter questions
 <p>
@@ -150,7 +152,7 @@ SRS, and (Real Soon Now) an srsmilter daemon implementing SRS,
 now that sendmail-8.14 supports CHGFROM and this is supported in pymilter-0.9.
 <li> The <a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a> package
 provides the <code>spf</code> module, a well tested implementation of the of
-the <a href="http://openspf.net">SPF</a> protocol, which is useful for
+the <a href="http://spf.pymilter.org">SPF</a> protocol, which is useful for
 detecting email forgery. 
 <li> The <a href="pygossip.html">pygossip</a> package provides the
 <code>gossip</code> library and server daemon for the GOSSiP protocol, which
