@@ -15,9 +15,26 @@ import Milter
 import spf
 import syslog
 try:
-  from bsddb3 import db as dbm
+  from bsddb3 import db
+  class DB(object):
+    def open(self,fname,mode):
+      if mode == 'r': flags = db.DB_RDONLY
+      else: raise RuntimeException('unsupported mode')
+      self.f = db.DB()
+      self.f.open(fname,flags=flags)
+    def __getitem__(self,key):
+      v = self.f.get(key)
+      if not v: raise KeyError(key)
+      return v
+    def close(self):
+      self.f.close()
+  def dbmopen(fname,mode):
+    f = DB()
+    f.open(fname,mode)
+    return f
 except:
   import anydbm as dbm
+  dbmopen = dbm.open
 from Milter.config import MilterConfigParser
 from Milter.utils import iniplist,parse_addr,ip4re
 
@@ -30,7 +47,10 @@ class Config(object):
     self.trusted_relay = ()
     self.trusted_forwarder = ()
     self.access_file = None
+    self.access_file_nulls = False
     #os.umask(config.savumask)
+
+config = None
 
 def read_config(cfglist):
   "Return new config object."
@@ -60,14 +80,14 @@ def read_config(cfglist):
 class SPFPolicy(object):
   "Get SPF policy by result from sendmail style access file."
   def __init__(self,sender,conf=None,access_file=None):
-    if conf:
+    if not conf:
       conf = config
     if not access_file:
       access_file = conf.access_file
     if conf: 
       self.use_nulls = conf.access_file_nulls
     else:
-      self.use_nulls = False
+      self.use_nulls = True
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
     self.acf = None
@@ -81,7 +101,7 @@ class SPFPolicy(object):
     self.acf = None
     if self.access_file:
       try:
-        self.acf = dbm.open(self.access_file,'r')
+        self.acf = dbmopen(self.access_file,'r')
       except:
         print('%s: Cannot open for reading'%self.access_file)
         syslog.syslog('%s: Cannot open for reading'%self.access_file)
@@ -90,23 +110,21 @@ class SPFPolicy(object):
 
   def getPolicy(self,pfx):
     acf = self.acf
-    if not acf:
-      print(self.access_file,'not open')
-      return None
-    if self.use_nulls: sfx = '\x00'
-    else: sfx = ''
+    if not acf: return None
+    if self.use_nulls: sfx = b'\x00'
+    else: sfx = b''
+    pfx = pfx.encode() + b'!'
     try:
-      print('key=',pfx + '!' + self.sender + sfx)
-      return acf[pfx + '!' + self.sender + sfx].rstrip('\x00')
+      return acf[pfx + self.sender.encode() + sfx].rstrip(b'\x00').decode()
     except KeyError:
       try:
-        return acf[pfx + '!' + self.domain + sfx].rstrip('\x00')
+        return acf[pfx + self.domain.encode() + sfx].rstrip(b'\x00').decode()
       except KeyError:
         try:
-          return acf[pfx + '!' + sfx].rstrip('\x00')
+          return acf[pfx + sfx].rstrip(b'\x00').decode()
         except KeyError:
           try:
-            return acf[pfx + sfx].rstrip('\x00')
+            return acf[pfx[:-1] + sfx].rstrip(b'\x00').decode()
           except KeyError:
             return None
   
@@ -329,7 +347,6 @@ class spfMilter(Milter.Base):
 if __name__ == "__main__":
   Milter.factory = spfMilter
   Milter.set_flags(Milter.CHGHDRS + Milter.ADDHDRS)
-  global config
   config = read_config(
     ['spfmilter.cfg','/etc/mail/spfmilter.cfg','/etc/postfix/spfmilter.cfg'])
   ue = config.untrapped_exception.upper()

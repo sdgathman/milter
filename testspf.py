@@ -3,6 +3,7 @@ from __future__ import print_function
 import unittest
 import Milter
 import spfmilter
+from spfmilter import SPFPolicy
 #import spfmartin as spfmilter
 import spf
 from Milter.test import TestBase
@@ -80,21 +81,17 @@ class SPFMilterTestCase(unittest.TestCase):
   # FIXME: call read_config() with test config to test parsing.
 
   def testPolicy(self):
-    p = spfmilter.SPFPolicy('good@example.com',access_file='test/access.db')
-    pol = p.getPolicy('smtp-auth:')
-    p.close()
+    with SPFPolicy('good@example.com',access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-auth')
     self.assertEqual(pol,'OK')
-    p = spfmilter.SPFPolicy('bad@example.com',access_file='test/access.db')
-    pol = p.getPolicy('smtp-auth:')
-    p.close()
+    with SPFPolicy('bad@example.com',access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-auth')
     self.assertEqual(pol,'REJECT')
-    p = spfmilter.SPFPolicy('bad@bad.example.com',access_file='test/access.db')
-    pol = p.getPolicy('smtp-auth:')
-    p.close()
+    with SPFPolicy('bad@bad.example.com',access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-auth')
     self.assertEqual(pol,None)
-    p = spfmilter.SPFPolicy('any@random.com',access_file='test/access.db')
-    pol = p.getPolicy('smtp-test:')
-    p.close()
+    with SPFPolicy('any@random.com',access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-test')
     self.assertEqual(pol,'REJECT')
 
   def testPass(self):
