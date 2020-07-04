@@ -14,28 +14,8 @@ import os
 import Milter
 import spf
 import syslog
-try:
-  from bsddb3 import db
-  class DB(object):
-    def open(self,fname,mode):
-      if mode == 'r': flags = db.DB_RDONLY
-      else: raise RuntimeException('unsupported mode')
-      self.f = db.DB()
-      self.f.open(fname,flags=flags)
-    def __getitem__(self,key):
-      v = self.f.get(key)
-      if not v: raise KeyError(key)
-      return v
-    def close(self):
-      self.f.close()
-  def dbmopen(fname,mode):
-    f = DB()
-    f.open(fname,mode)
-    return f
-except:
-  import anydbm as dbm
-  dbmopen = dbm.open
 from Milter.config import MilterConfigParser
+from Milter.policy import MTAPolicy
 from Milter.utils import iniplist,parse_addr,ip4re
 
 syslog.openlog('spfmilter',0,syslog.LOG_MAIL)
@@ -77,57 +57,6 @@ def read_config(cfglist):
   conf.access_file_nulls = cp.getboolean('spf','access_file_nulls')
   return conf
 
-class SPFPolicy(object):
-  "Get SPF policy by result from sendmail style access file."
-  def __init__(self,sender,conf=None,access_file=None):
-    if not conf:
-      conf = config
-    if not access_file:
-      access_file = conf.access_file
-    if conf: 
-      self.use_nulls = conf.access_file_nulls
-    else:
-      self.use_nulls = True
-    self.sender = sender
-    self.domain = sender.split('@')[-1].lower()
-    self.acf = None
-    self.access_file = access_file
-
-  def close(self):
-    if self.acf:
-      self.acf.close()
-
-  def __enter__(self): 
-    self.acf = None
-    if self.access_file:
-      try:
-        self.acf = dbmopen(self.access_file,'r')
-      except:
-        print('%s: Cannot open for reading'%self.access_file)
-        syslog.syslog('%s: Cannot open for reading'%self.access_file)
-    return self
-  def __exit__(self,t,v,b): self.close()
-
-  def getPolicy(self,pfx):
-    acf = self.acf
-    if not acf: return None
-    if self.use_nulls: sfx = b'\x00'
-    else: sfx = b''
-    pfx = pfx.encode() + b'!'
-    try:
-      return acf[pfx + self.sender.encode() + sfx].rstrip(b'\x00').decode()
-    except KeyError:
-      try:
-        return acf[pfx + self.domain.encode() + sfx].rstrip(b'\x00').decode()
-      except KeyError:
-        try:
-          return acf[pfx + sfx].rstrip(b'\x00').decode()
-        except KeyError:
-          try:
-            return acf[pfx[:-1] + sfx].rstrip(b'\x00').decode()
-          except KeyError:
-            return None
-  
 class spfMilter(Milter.Base):
   "Milter to check SPF.  Each connection gets its own instance."
 
@@ -223,7 +152,7 @@ class spfMilter(Milter.Base):
       )
       # Restrict SMTP AUTH users to authorized domains
       authsend = '@'.join((self.user,domain))
-      with SPFPolicy(authsend,self.conf) as p:
+      with MTAPolicy(authsend,self.conf) as p:
         policy = p.getPolicy('smtp-auth')
       print('smtp-auth policy:',policy,authsend,self.conf.access_file)
       if policy:
@@ -268,7 +197,7 @@ class spfMilter(Milter.Base):
         # check hello name via spf unless spf pass
         h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
         hres,hcode,htxt = h.check()
-        with SPFPolicy(self.hello_name,self.conf) as hp:
+        with MTAPolicy(self.hello_name,self.conf) as hp:
           policy = hp.getPolicy('helo-%s'%hres)
           #print('helo-%s:%s %s'%(hres,self.hello_name,policy))
           if not policy:
@@ -289,7 +218,7 @@ class spfMilter(Milter.Base):
         hres,hcode,htxt = res,code,txt
     else: hres = None
 
-    with SPFPolicy(q.s,self.conf) as p:
+    with MTAPolicy(q.s,self.conf) as p:
       if res == 'fail':
         policy = p.getPolicy('spf-fail')
         if not policy or policy == 'REJECT':
