@@ -24,6 +24,7 @@ class TestMilter(TestBase,bms.bmsMilter):
     TestBase.__init__(self)
     bms.config = bms.Config()
     bms.config.access_file = 'test/access.db'
+    bms.config.access_file_nulls = True
     bms.bmsMilter.__init__(self)
     self.setsymval('j','test.milter.org')
     # disable SPF for now
@@ -57,6 +58,20 @@ class BMSMilterTestCase(unittest.TestCase):
     # unlike spfmilter, bms milter doesn't check AUTH for implicit domain
     self.assertEqual(rc,Milter.ACCEPT)
     milter.close()
+
+  def testPolicy(self):
+    with bms.SPFPolicy('good@example.com',conf=bms.config,access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-auth')
+    self.assertEqual(pol,'OK')
+    with bms.SPFPolicy('bad@example.com',conf=bms.config,access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-auth')
+    self.assertEqual(pol,'REJECT')
+    with bms.SPFPolicy('bad@bad.example.com',conf=bms.config,access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-auth')
+    self.assertEqual(pol,None)
+    with bms.SPFPolicy('any@random.com',conf=bms.config,access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-test')
+    self.assertEqual(pol,'REJECT')
 
   def testDefang(self,fname='virus1'):
     milter = TestMilter()

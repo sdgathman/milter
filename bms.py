@@ -542,7 +542,7 @@ class SPFPolicy(MTAPolicy):
   "Get SPF/DKIM policy by result from sendmail style access file."
 
   def getFailPolicy(self):
-    policy = self.getPolicy('spf-fail:')
+    policy = self.getPolicy('spf-fail')
     if not policy:
       if self.domain in spf_accept_fail:
         policy = 'CBV'
@@ -551,7 +551,7 @@ class SPFPolicy(MTAPolicy):
     return policy
 
   def getNonePolicy(self):
-    policy = self.getPolicy('spf-none:')
+    policy = self.getPolicy('spf-none')
     if not policy:
       if spf_reject_noptr:
         policy = 'REJECT'
@@ -560,7 +560,7 @@ class SPFPolicy(MTAPolicy):
     return policy
 
   def getSoftfailPolicy(self):
-    policy = self.getPolicy('spf-softfail:')
+    policy = self.getPolicy('spf-softfail')
     if not policy:
       if self.domain in spf_accept_softfail:
         policy = 'OK'
@@ -571,7 +571,7 @@ class SPFPolicy(MTAPolicy):
     return policy
 
   def getNeutralPolicy(self):
-    policy = self.getPolicy('spf-neutral:')
+    policy = self.getPolicy('spf-neutral')
     if not policy:
       if self.domain in spf_reject_neutral:
         policy = 'REJECT'
@@ -579,19 +579,19 @@ class SPFPolicy(MTAPolicy):
     return policy
 
   def getPermErrorPolicy(self):
-    policy = self.getPolicy('spf-permerror:')
+    policy = self.getPolicy('spf-permerror')
     if not policy:
       policy = 'REJECT'
     return policy
 
   def getTempErrorPolicy(self):
-    policy = self.getPolicy('spf-temperror:')
+    policy = self.getPolicy('spf-temperror')
     if not policy:
       policy = 'REJECT'
     return policy
 
   def getPassPolicy(self):
-    policy = self.getPolicy('spf-pass:')
+    policy = self.getPolicy('spf-pass')
     if not policy:
       policy = 'OK'
     return policy
@@ -937,9 +937,9 @@ class bmsMilter(Milter.Base):
           return Milter.REJECT
       if self.internal_connection:
         if self.user:
-          p = SPFPolicy('%s@%s'%(self.user,domain),conf=self.config)
-          policy = p.getPolicy('smtp-auth:')
-          p.close()
+          with SPFPolicy('%s@%s'%(self.user,domain),conf=self.config) as p:
+            policy = p.getPolicy('smtp-auth')
+            print("smtp-auth: ",p.sender,policy,p.use_nulls)
         else:
           policy = None
           # trust ourself not to be a zombie
@@ -1006,8 +1006,9 @@ class bmsMilter(Milter.Base):
         q = spf.query(self.connectip,self.canon_from,self.hello_name,
                 receiver=self.receiver,strict=False)
         q.result = 'pass'
-        p = SPFPolicy(q.s,self.config)
-        if self.need_cbv(p.getPassPolicy(),q,'internal'):
+        with SPFPolicy(q.s,self.config) as p:
+          passpolicy = p.getPassPolicy()
+        if self.need_cbv(passpolicy,q,'internal'):
           self.log('REJECT: internal mail from',q.s)
           self.setreply('550','5.7.1',
             "We don't accept internal mail from %s" %q.o,
@@ -1102,8 +1103,7 @@ class bmsMilter(Milter.Base):
 
   def check_spf(self):
     receiver = self.receiver
-    config = self.config
-    for tf in config.trusted_forwarder:
+    for tf in self.config.trusted_forwarder:
       q = spf.query(self.connectip,'',tf,receiver=receiver,strict=False)
       res,code,txt = q.check()
       if res == 'none':
@@ -1129,7 +1129,11 @@ class bmsMilter(Milter.Base):
       self.cbv_needed = (q,'permerror') # report SPF syntax error to sender
       res,code,txt = q.perm_error.ext   # extended (lax processing) result
       txt = 'EXT: ' + txt
-    p = SPFPolicy(q.s,self.config)
+    with SPFPolicy(q.s,self.config) as p:
+      return self.check_spf_policy(p,q,res,code,txt)
+
+  def check_spf_policy(self,p,q,res,code,txt):
+    config = self.config
     # FIXME: try:finally to close policy db, or reuse with lock
     if res in ('error','temperror'):
       if self.need_cbv(p.getTempErrorPolicy(),q,'temperror'):
@@ -1144,12 +1148,12 @@ class bmsMilter(Milter.Base):
     if res != 'pass':
       if self.mailfrom != '<>':
         # check hello name via spf unless spf pass
-        h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
+        h = spf.query(self.connectip,'',self.hello_name,receiver=self.receiver)
         hres,hcode,htxt = h.check()
         # FIXME: in a few cases, rejecting on HELO neutral causes problems
         # for senders forced to use their braindead ISPs email service.
-        hp = SPFPolicy(self.hello_name,self.config)
-        policy = hp.getPolicy('helo-%s:'%hres)
+        with SPFPolicy(self.hello_name,config) as hp:
+          policy = hp.getPolicy('helo-%s:'%hres)
         if not policy:
           if hres in ('deny','fail','neutral','softfail'):
             # Even the most idiotic admin that uses non-existent domains
@@ -1255,7 +1259,7 @@ class bmsMilter(Milter.Base):
       kv['helo_spf'] = hres
     if res != q.result:
       kv['bestguess'] = res
-    self.add_header('Received-SPF',q.get_header(q.result,receiver,**kv),0)
+    self.add_header('Received-SPF',q.get_header(q.result,self.receiver,**kv),0)
     self.spf_guess = res
     self.spf_helo = hres
     self.spf = q

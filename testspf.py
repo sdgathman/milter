@@ -215,7 +215,6 @@ if __name__ == '__main__':
     if not os.path.exists('test/access.db') or \
         os.path.getmtime('test/access') > os.path.getmtime('test/access.db'):
       cmd = 'tr : ! <test/access | makemap hash test/access.db'
-      print(cmd)
       if os.system(cmd):
         print('failed!')
         os.exit(1)
