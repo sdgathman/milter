@@ -18,13 +18,11 @@ try:
   from email import errors
   from email.message import Message
   from email.utils import getaddresses
-  import dbm
 except:
   from StringIO import StringIO as BytesIO
   from email import Errors as errors
   from email.Message import Message
   from email.Utils import getaddresses
-  import anydbm as dbm
 import mime
 import Milter
 import tempfile
@@ -41,6 +39,7 @@ from Milter.utils import \
         iniplist,parse_addr,parse_header,ip4re,addr2bin,parseaddr
 from Milter.config import MilterConfigParser
 from Milter.greysql import Greylist
+from Milter.policy import MTAPolicy
 
 from fnmatch import fnmatchcase
 from glob import glob
@@ -119,6 +118,7 @@ class Config(object):
       'googlegroups.com', 'att.net', 'nokiamail.com'
     )
     self.access_file = None
+    self.access_file_nulls = False
     ## List of executable extensions to be removed from incoming emails
     # Executable email attachments is the most common Windows malware
     # vector in my experience.
@@ -538,38 +538,8 @@ def param2dict(str):
     if len(e) < 2: e.append(None)
   return dict([(k.upper(),v) for k,v in pairs])
 
-class SPFPolicy(object):
+class SPFPolicy(MTAPolicy):
   "Get SPF/DKIM policy by result from sendmail style access file."
-  def __init__(self,sender):
-    self.sender = sender
-    self.domain = sender.split('@')[-1].lower()
-    access_file = config.access_file
-    if access_file:
-      try:
-        acf = dbm.open(access_file,'r')
-      except Exception as x:
-        acf = None
-        milter_log.error("%s: %%s"%access_file,x,exc_info=True)
-    else: acf = None
-    self.acf = acf
-
-  def close(self):
-    if self.acf:
-      self.acf.close()
-
-  def getPolicy(self,pfx):
-    acf = self.acf
-    if not acf: return None
-    try:
-      return acf[pfx + self.sender]
-    except KeyError:
-      try:
-        return acf[pfx + self.domain]
-      except KeyError:
-        try:
-          return acf[pfx]
-        except KeyError:
-          return None
 
   def getFailPolicy(self):
     policy = self.getPolicy('spf-fail:')
@@ -930,7 +900,7 @@ class bmsMilter(Milter.Base):
         "ssf =",self.getsymval('{auth_ssf}'), "INTERNAL"
       )
       # Detailed authorization policy is configured in the access file below.
-      if authres: self.arresults.append(
+      if auth_type and authres: self.arresults.append(
 	authres.SMTPAUTHAuthenticationResult(result = 'pass',
 	  result_comment = auth_type+' sslbits=%s'%ssl_bits,
 	  smtp_auth = self.user
@@ -967,7 +937,7 @@ class bmsMilter(Milter.Base):
           return Milter.REJECT
       if self.internal_connection:
         if self.user:
-          p = SPFPolicy('%s@%s'%(self.user,domain))
+          p = SPFPolicy('%s@%s'%(self.user,domain),conf=self.config)
           policy = p.getPolicy('smtp-auth:')
           p.close()
         else:
@@ -1036,7 +1006,7 @@ class bmsMilter(Milter.Base):
         q = spf.query(self.connectip,self.canon_from,self.hello_name,
                 receiver=self.receiver,strict=False)
         q.result = 'pass'
-        p = SPFPolicy(q.s)
+        p = SPFPolicy(q.s,self.config)
         if self.need_cbv(p.getPassPolicy(),q,'internal'):
           self.log('REJECT: internal mail from',q.s)
           self.setreply('550','5.7.1',
@@ -1159,7 +1129,7 @@ class bmsMilter(Milter.Base):
       self.cbv_needed = (q,'permerror') # report SPF syntax error to sender
       res,code,txt = q.perm_error.ext   # extended (lax processing) result
       txt = 'EXT: ' + txt
-    p = SPFPolicy(q.s)
+    p = SPFPolicy(q.s,self.config)
     # FIXME: try:finally to close policy db, or reuse with lock
     if res in ('error','temperror'):
       if self.need_cbv(p.getTempErrorPolicy(),q,'temperror'):
@@ -1178,7 +1148,7 @@ class bmsMilter(Milter.Base):
         hres,hcode,htxt = h.check()
         # FIXME: in a few cases, rejecting on HELO neutral causes problems
         # for senders forced to use their braindead ISPs email service.
-        hp = SPFPolicy(self.hello_name)
+        hp = SPFPolicy(self.hello_name,self.config)
         policy = hp.getPolicy('helo-%s:'%hres)
         if not policy:
           if hres in ('deny','fail','neutral','softfail'):
@@ -2134,7 +2104,7 @@ class bmsMilter(Milter.Base):
       if not self.internal_connection and self.has_dkim:
         res = self.check_dkim()
         if self.dkim_domain and not self.whitelist:
-          p = SPFPolicy(self.dkim_domain)
+          p = SPFPolicy(self.dkim_domain,self.config)
           policy = p.getPolicy('dkim-%s:'%res)
           p.close()
           if policy == 'REJECT':
