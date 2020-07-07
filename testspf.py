@@ -217,7 +217,7 @@ if __name__ == '__main__':
       cmd = 'tr : ! <test/access | makemap hash test/access.db'
       if os.system(cmd):
         print('failed!')
-        os.exit(1)
+        sys.exit(1)
   else:
     print("Missing test/access")
     os.exit(1)
