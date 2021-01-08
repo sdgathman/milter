@@ -19,8 +19,8 @@
 Name: milter
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Version: 0.9
-Release: 2%{dist}
+Version: 1.0
+Release: 1%{dist}
 Source: milter-%{version}.tar.gz
 Source1: bmsmilter.service
 License: GPLv2+
@@ -255,6 +255,9 @@ fi
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Thu Jan  7 2021 Stuart Gathman <stuart@gathman.org> 1.0-1
+- Use python3
+
 * Fri Jul 27 2018 Stuart Gathman <stuart@gathman.org> 0.9-2
 - Fix rotation and restarts for systemd
 

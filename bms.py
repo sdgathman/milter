@@ -123,6 +123,12 @@ class Config(object):
     # Executable email attachments is the most common Windows malware
     # vector in my experience.
     self.banned_exts = mime.extlist.split(',')
+    ## Remove scripts from HTML attachments
+    self.scan_html = True
+    ## Scan email attachments
+    self.scan_rfc822 = True
+    ## Check filenames in ZIP attachments
+    self.scan_zip = False
     ## Option to block subjects with chinese characters.
     # This does not prevent corresponding with Chinese people,
     # or block Chinese in other parts of the email.  Chinese
@@ -241,9 +247,6 @@ _archive_lock = None
 check_user = {}
 block_forward = {}
 hide_path = ()
-scan_zip = False
-scan_html = True
-scan_rfc822 = True
 internal_policy = False
 private_relay = ()
 internal_mta = ()
@@ -341,7 +344,7 @@ def read_config(list):
     config.email_providers = cp.get('milter','email_providers')
 
   # defang section
-  global scan_rfc822, scan_html, scan_zip, block_forward
+  global block_forward
   if cp.has_section('defang'):
     section = 'defang'
     # for backward compatibility,
@@ -349,9 +352,9 @@ def read_config(list):
     config.banned_exts = cp.getlist(section,'banned_exts')
   else: # use milter section if no defang section for compatibility
     section = 'milter'
-  scan_rfc822 = cp.getboolean(section,'scan_rfc822')
-  scan_zip = cp.getboolean(section,'scan_zip')
-  scan_html = cp.getboolean(section,'scan_html')
+  config.scan_rfc822 = cp.getboolean(section,'scan_rfc822')
+  config.scan_zip = cp.getboolean(section,'scan_zip')
+  config.scan_html = cp.getboolean(section,'scan_html')
   config.block_chinese = cp.getboolean(section,'block_chinese')
   block_forward = cp.getaddrset(section,'block_forward')
   config.porn_words = [x for x in cp.getlist(section,'porn_words') 
@@ -1402,7 +1405,6 @@ class bmsMilter(Milter.Base):
 
   # Heuristic checks for spam headers
   def check_header(self,name,val):
-    print("check_header: name,val =",name,val)
     config = self.config
     lname = name.lower()
     # val is decoded header value
@@ -1720,16 +1722,19 @@ class bmsMilter(Milter.Base):
     
   def _chk_attach(self,msg):
     "Filter attachments by content."
+    config = self.config
     # check for bad extensions
-    mime.check_name(msg,self.tempname,ckname=self._chk_ext,scan_zip=scan_zip)
+    mime.check_name(msg,self.tempname,ckname=self._chk_ext,
+       scan_zip=config.scan_zip)
     # remove scripts from HTML
-    if scan_html:
+    if config.scan_html:
       mime.check_html(msg,self.tempname)        
     # don't let a tricky virus slip one past us
-    if scan_rfc822:
-      msg = msg.get_submsg()
-      if isinstance(msg,Message):
-        return mime.check_attachments(msg,self._chk_attach)
+    if config.scan_rfc822:
+      submsg = msg.get_submsg()
+      print(msg.get_content_type(),type(submsg),type(msg._payload),'modified:',msg.ismodified())
+      if isinstance(submsg,Message):
+        return mime.check_attachments(submsg,self._chk_attach)
     return Milter.CONTINUE
 
   def alter_recipients(self,discard_list,redirect_list):

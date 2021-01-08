@@ -10,6 +10,7 @@ except:
   from StringIO import BytesIO
 import email
 import sys
+import zipfile
 #import pdb
 
 def DNSLookup(name,qtype,strict=True,timeout=None): return []
@@ -20,7 +21,7 @@ except:
   spf = None
 
 class TestMilter(TestBase,bms.bmsMilter):
-  def __init__(self):
+  def __init__(self,zf):
     TestBase.__init__(self)
     bms.config = bms.Config()
     bms.config.access_file = 'test/access.db'
@@ -29,12 +30,29 @@ class TestMilter(TestBase,bms.bmsMilter):
     self.setsymval('j','test.milter.org')
     # disable SPF for now
     if spf: spf.DNSLookup = DNSLookup
+    self.zf = zf
+
+  def feedMsg(self,vname,sender='spam@adv.com',*rcpts):
+    try:
+      with self.zf.open(vname,"r") as fp:
+        return self.feedFile(fp,sender,*rcpts)
+    except KeyError: pass
+    with open('test/'+vname,"rb") as fp:
+      return self.feedFile(fp,sender,*rcpts)
 
 class BMSMilterTestCase(unittest.TestCase):
+  
+  def setUp(self):
+    self.zf = zipfile.ZipFile('test/virus.zip','r')
+    self.zf.setpassword(b'denatured')
+
+  def tearDown(self):
+    self.zf.close()
+    self.zf = None
 
   ## Test SMTP AUTH feature.
   def testAuth(self):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     # Try a SMTP authorized user from an unauthorized IP, that is 
     # authorized to use example.com
     milter.setsymval('{auth_authen}','good')
@@ -74,15 +92,15 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertEqual(pol,'REJECT')
 
   def testDefang(self,fname='virus1'):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     rc = milter.connect('testDefang')
     self.assertEqual(rc,Milter.CONTINUE)
     rc = milter.feedMsg(fname)
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     with open('test/'+fname+".tstout","wb") as f: f.write(fp.getvalue())
-    #self.failUnless(fp.getvalue() == open("test/virus1.out","r").read())
+    #self.assertTrue(fp.getvalue() == open("test/virus1.out","r").read())
     fp.seek(0)
     msg = mime.message_from_file(fp)
     str = msg.get_payload(1).get_payload()
@@ -91,71 +109,71 @@ class BMSMilterTestCase(unittest.TestCase):
 
   # test some spams that crashed our parser
   def testParse(self,fname='spam7'):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     milter.connect('testParse')
     rc = milter.feedMsg(fname)
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
+    self.assertFalse(milter._bodyreplaced,"Milter needlessly replaced body.")
     fp = milter._body
     with open('test/'+fname+".tstout","wb") as f: f.write(fp.getvalue())
     milter.connect('pro-send.com')
     rc = milter.feedMsg('spam8')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
+    self.assertFalse(milter._bodyreplaced,"Milter needlessly replaced body.")
     rc = milter.feedMsg('bounce')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
+    self.assertFalse(milter._bodyreplaced,"Milter needlessly replaced body.")
     rc = milter.feedMsg('bounce1')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
+    self.assertFalse(milter._bodyreplaced,"Milter needlessly replaced body.")
     milter.close()
 
   def testDefang2(self):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     milter.connect('testDefang2')
     rc = milter.feedMsg('samp1')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
+    self.assertFalse(milter._bodyreplaced,"Milter needlessly replaced body.")
     rc = milter.feedMsg("virus3")
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     with open("test/virus3.tstout","wb") as f: f.write(fp.getvalue())
-    #self.failUnless(fp.getvalue() == open("test/virus3.out","r").read())
+    #self.assertTrue(fp.getvalue() == open("test/virus3.out","r").read())
     rc = milter.feedMsg("virus6")
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter._bodyreplaced,"Message body not replaced")
-    self.failUnless(milter._headerschanged,"Message headers not adjusted")
+    self.assertTrue(milter._bodyreplaced,"Message body not replaced")
+    self.assertTrue(milter._headerschanged,"Message headers not adjusted")
     fp = milter._body
     with open("test/virus3.tstout","wb") as f: f.write(fp.getvalue())
     milter.close()
 
   def testDefang3(self):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     milter.connect('testDefang3')
     # test script removal on complex HTML attachment
     rc = milter.feedMsg('amazon')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     with open("test/amazon.tstout","wb") as f: f.write(fp.getvalue())
     # test defanging Klez virus
     rc = milter.feedMsg("virus13")
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter._bodyreplaced,"Message body not replaced")
+    self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     with open("test/virus13.tstout","wb") as f: f.write(fp.getvalue())
     # test script removal on quoted-printable HTML attachment
     # sgmllib can't handle the <![if cond]> syntax
     rc = milter.feedMsg('spam44')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failIf(milter._bodyreplaced,"Message body replaced")
+    self.assertFalse(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     with open("test/spam44.tstout","wb") as f: f.write(fp.getvalue())
     milter.close()
  
   def testRFC822(self):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     milter.connect('testRFC822')
     # test encoded rfc822 attachment
     #pdb.set_trace()
@@ -163,34 +181,34 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertEqual(rc,Milter.ACCEPT)
     # python2.4 doesn't scan encoded message attachments
     if sys.hexversion < 0x02040000:
-      self.failUnless(milter._bodyreplaced,"Message body not replaced")
-    #self.failIf(milter._bodyreplaced,"Message body replaced")
+      self.assertTrue(milter._bodyreplaced,"Message body not replaced")
+    #self.assertFalse(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     with open("test/test8.tstout","wb") as f: f.write(fp.getvalue())
     rc = milter.feedMsg('virus7')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter._bodyreplaced,"Message body not replaced")
-    #self.failIf(milter._bodyreplaced,"Message body replaced")
+    #self.assertFalse(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     with open("test/virus7.tstout","wb") as f: f.write(fp.getvalue())
+    self.assertTrue(milter._bodyreplaced,"Message body not replaced")
 
   def testSmartAlias(self):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     milter.connect('testSmartAlias')
     # test smart alias feature
     key = ('foo@example.com','baz@bat.com')
     bms.config.smart_alias[key] = ['ham@eggs.com']
     rc = milter.feedMsg('test8',key[0],key[1])
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter._delrcpt == ['<baz@bat.com>'])
-    self.failUnless(milter._addrcpt == ['<ham@eggs.com>'])
+    self.assertTrue(milter._delrcpt == ['<baz@bat.com>'])
+    self.assertTrue(milter._addrcpt == ['<ham@eggs.com>'])
     # python2.4 email does not decode message attachments, so script
     # is not replaced
     if sys.hexversion < 0x02040000:
-      self.failUnless(milter._bodyreplaced,"Message body not replaced")
+      self.assertTrue(milter._bodyreplaced,"Message body not replaced")
 
   def testBadBoundary(self):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     milter.connect('testBadBoundary')
     # test rfc822 attachment with invalid boundaries
     #pdb.set_trace()
@@ -200,20 +218,20 @@ class BMSMilterTestCase(unittest.TestCase):
       # payload a str
       self.assertEqual(rc,Milter.REJECT)
       self.assertEqual(milter._reply[0],'554')
-    #self.failUnless(milter._bodyreplaced,"Message body not replaced")
-    self.failIf(milter._bodyreplaced,"Message body replaced")
+    #self.assertTrue(milter._bodyreplaced,"Message body not replaced")
+    self.assertFalse(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     with open("test/bound.tstout","wb") as f: f.write(fp.getvalue())
 
   def testCompoundFilename(self):
-    milter = TestMilter()
+    milter = TestMilter(self.zf)
     milter.connect('testCompoundFilename')
     # test rfc822 attachment with invalid boundaries
     #pdb.set_trace()
     rc = milter.feedMsg('test1')
     self.assertEqual(rc,Milter.ACCEPT)
-    #self.failUnless(milter._bodyreplaced,"Message body not replaced")
-    self.failIf(milter._bodyreplaced,"Message body replaced")
+    #self.assertTrue(milter._bodyreplaced,"Message body not replaced")
+    self.assertFalse(milter._bodyreplaced,"Message body replaced")
     fp = milter._body
     with open("test/test1.tstout","wb") as f: f.write(fp.getvalue())
 
@@ -246,10 +264,10 @@ From: postmaster@mail.example.com
 
 #  def testReject(self):
 #    "Test content based spam rejection."
-#    milter = TestMilter()
+#    milter = TestMilter(self.zf)
 #    milter.connect('gogo-china.com')
 #    rc = milter.feedMsg('big5');
-#    self.failUnless(rc == Milter.REJECT)
+#    self.assertTrue(rc == Milter.REJECT)
 #    milter.close();
 
 def suite(): 
@@ -260,7 +278,7 @@ def suite():
 if __name__ == '__main__':
   if len(sys.argv) > 1:
     for fname in sys.argv[1:]:
-      milter = TestMilter()
+      milter = TestMilter(self.zf)
       milter.connect('main')
       with open(fname,'rb') as fp:
         rc = milter.feedFile(fp)

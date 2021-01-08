@@ -1,4 +1,4 @@
-VERS=milter-0.9
+VERS=milter-1.0
 TAG=$(VERS)
 SRCTAR=$(VERS).tar.gz
 
