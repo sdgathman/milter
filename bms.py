@@ -166,12 +166,12 @@ class Config(object):
     # If proto is missing, it defaults to unix domain socket.
     # Examples:
     # <pre>
-    # 'unix:/var/run/pythonfilter'	Unix domain socket
-    # 'local:/var/run/pythonfilter'	named pipe
-    # 'inet:8800'			port 8800 on ANY IP4 interface
-    # 'inet:8800@hostname'		port 8800 on hostname
-    # 'inet6:8801'			port 8801 on ANY IP6 interface
-    # 'inet6:8802@[2001:db8:1234::1]'	port 8802 on IP6 interface
+    # 'unix:/var/run/pythonfilter'           Unix domain socket
+    # 'local:/var/run/pythonfilter'          named pipe
+    # 'inet:8800'                            port 8800 on ANY IP4 interface
+    # 'inet:8800@hostname'                   port 8800 on hostname
+    # 'inet6:8801'                           port 8801 on ANY IP6 interface
+    # 'inet6:8802@[2001:db8:1234::1]'        port 8802 on IP6 interface
     # </pre>
     # See <a href="http://pythonhosted.org/pymilter/namespacemilter.html#a266a6e09897499d8b1ae0e20f0d2be73">milter.setconn()</a>
     self.socketname = "/tmp/pythonsock"
@@ -236,7 +236,7 @@ class Config(object):
     if not greylist:
       grey_db = os.path.join(self.datadir,self.grey_db)
       greylist = Greylist(grey_db,self.grey_time,
-	self.grey_expire,self.grey_days)
+        self.grey_expire,self.grey_days)
       local.greylist = greylist
     return greylist
 
@@ -312,7 +312,11 @@ def read_config(list):
     'case_sensitive_localpart': 'no',
     'internal_policy': 'no'
   })
-  cp.read(list)
+  try:
+    cp.read(list)
+  except UnicodeDecodeError:
+    print("Using latin1 for compatibility - consider using utf-8.")
+    cp.read(list,encoding='latin1')
   config = Config()
   # old configs have datadir for both logging and data
   config.datadir = cp.getdefault('milter','datadir','')
@@ -865,8 +869,8 @@ class bmsMilter(Milter.Base):
         )
         return Milter.REJECT
     if authres and not self.missing_ptr: self.arresults.append(
-	authres.IPRevAuthenticationResult(result = 'pass',
-	  policy_iprev=self.connectip,policy_iprev_comment=self.connecthost)
+        authres.IPRevAuthenticationResult(result = 'pass',
+          policy_iprev=self.connectip,policy_iprev_comment=self.connecthost)
     )
     if self.canon_from:
       self.reject = None	# reset delayed reject seen after mail from
@@ -904,10 +908,10 @@ class bmsMilter(Milter.Base):
       )
       # Detailed authorization policy is configured in the access file below.
       if auth_type and authres: self.arresults.append(
-	authres.SMTPAUTHAuthenticationResult(result = 'pass',
-	  result_comment = auth_type+' sslbits=%s'%ssl_bits,
-	  smtp_auth = self.user
-	)
+        authres.SMTPAUTHAuthenticationResult(result = 'pass',
+          result_comment = auth_type+' sslbits=%s'%ssl_bits,
+          smtp_auth = self.user
+        )
       )
       if self.getsymval('{verify}'):
         self.log("SSL AUTH:",
@@ -1059,7 +1063,7 @@ class bmsMilter(Milter.Base):
           return self.delay_reject(template='anon',
                 mfrom=self.efrom,helo=self.hello_name,ip=self.connectip)
       if domain and rc == Milter.CONTINUE \
-	  and not (self.internal_connection or self.trusted_relay):
+          and not (self.internal_connection or self.trusted_relay):
         rc = self.create_gossip(domain,res,hres)
     return rc
 
@@ -1122,10 +1126,10 @@ class bmsMilter(Milter.Base):
         'SPF fail: see http://openspf.net/why.html?sender=%s&ip=%s' % (q.s,q.c))
       res,code,txt = q.check()
       if authres: self.arresults.append(
-	authres.SPFAuthenticationResult(result = res, result_comment = txt,
-	  smtp_mailfrom = self.canon_from,
-	  smtp_helo = self.hello_name
-	)
+        authres.SPFAuthenticationResult(result = res, result_comment = txt,
+          smtp_mailfrom = self.canon_from,
+          smtp_helo = self.hello_name
+        )
       )
     q.result = res
     if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
@@ -1174,8 +1178,8 @@ class bmsMilter(Milter.Base):
             "as a legitimate MTA in the SPF records for your domain.  If you",
             "get this bounce, the message was not in fact a forgery, please",
             "IMMEDIATELY notify your email administrator of the problem.",
-	    template='helofail',mfrom=self.efrom,
-	    helo=self.hello_name,ip=self.connectip
+            template='helofail',mfrom=self.efrom,
+            helo=self.hello_name,ip=self.connectip
           )
         if hres == 'none' and config.spf_best_guess \
           and not dynip(self.hello_name,self.connectip):
@@ -1380,7 +1384,7 @@ class bmsMilter(Milter.Base):
       self.log("rcpt to",to,str)
       raise
     if self.greylist and self.config.greylist \
-	and self.canon_from and not self.reject:
+        and self.canon_from and not self.reject:
       # no policy for trusted or internal
       greylist = self.config.getGreylist()
       if self.spf and self.spf_guess == 'pass':
@@ -1571,7 +1575,7 @@ class bmsMilter(Milter.Base):
     elif self.whitelist_sender:
       # check for AutoReplys
       if (lname == 'subject' and reautoreply.match(val)) \
-	or (lname == 'user-agent' and val.lower().startswith('vacation')):
+        or (lname == 'user-agent' and val.lower().startswith('vacation')):
           self.whitelist_sender = False
           self.log('AUTOREPLY: not whitelisted')
 
@@ -1622,7 +1626,7 @@ class bmsMilter(Milter.Base):
   def get_enhanced_txt(self):
     s = ''.join('%s: %s\n' % (name,val) for name,val in self.enhanced_headers)
     self.fp.seek(self.body_start)
-    return s+'\n'+self.fp.read()
+    return s.encode('utf8')+b'\n'+self.fp.read()
 
   def eoh(self):
     if not self.fp: return Milter.TEMPFAIL      # not seen by envfrom
@@ -1798,6 +1802,8 @@ class bmsMilter(Milter.Base):
         else:
           dkim_comment = 'Bad %d bit signature.' % d.keysize
           result = 'fail'
+        # message should be either 7bit ascii or utf-8 
+        self.dkim_domain = d.domain.decode('utf8')
       except dkim.ValidationError as x:
         dkim_comment = str(x)
         result = 'fail'
@@ -1807,13 +1813,12 @@ class bmsMilter(Milter.Base):
       except Exception as x:
         dkim_comment = str(x)
         milter_log.error("check_dkim: %s",x,exc_info=True)
-      self.dkim_domain = d.domain
       if authres: self.arresults.append(
         authres.DKIMAuthenticationResult(result=result,
-	  result_comment = dkim_comment,
+          result_comment = dkim_comment,
           header_i=d.signature_fields.get(b'i'),
-	  header_d=d.signature_fields.get(b'd')
-	)
+          header_d=d.signature_fields.get(b'd')
+        )
       )
       if not res:
         fd,fname = tempfile.mkstemp(".dkim")
@@ -1857,7 +1862,7 @@ class bmsMilter(Milter.Base):
               if self.external_dkim:
                 try:
                   ar = authres.AuthenticationResultsHeader.parse_value(
-        		  self.external_dkim)
+                          self.external_dkim)
                   for r in ar.results:
                     if r.method == 'dkim' and r.result == 'pass':
                       for p in r.properties:
@@ -1869,8 +1874,8 @@ class bmsMilter(Milter.Base):
             if user == 'bandom' and self.internal_connection:
               if self.spf:
                 if self.spf_guess == 'pass' or q.result == 'none' \
-			or self.spf.o == self.dkim_domain \
-			or (self.dkim_domain and 
+                        or self.spf.o == self.dkim_domain \
+                        or (self.dkim_domain and 
                             self.dkim_domain in self.config.email_providers):
                   self.confidence = 0	# ban regardless of reputation status
                   s = rcpt.split('@')[0][-1]
@@ -2128,7 +2133,7 @@ class bmsMilter(Milter.Base):
       # add authentication results header
       if self.arresults:
         h = authres.AuthenticationResultsHeader(authserv_id = self.receiver, 
-	  results=self.arresults)
+          results=self.arresults)
         name,val = str(h).split(': ',1)
         self.add_header(name,val,0)
 
@@ -2395,11 +2400,13 @@ class bmsMilter(Milter.Base):
 def main():
   if config.access_file:
     try:
-      acf = dbm.open(config.access_file,'r')
+      # Check that we can open database and fail early
+      acf = MTAPolicy('',conf=config)
       acf.close()
-    except:
+    except PermissionError:
       milter_log.error('Unable to read: %s',config.access_file)
-      return
+      return 1
+    except: raise
   # Banned ips and domains, and anything we forgot, are still in logdir
   # (And logdir and datadir are the same for old configs.)
   if config.logdir:
@@ -2422,8 +2429,8 @@ def main():
   try:
     global banned_domains
     banned_domains = set(dom.strip()
-	    for fn in glob('banned_domains*')
-	    for dom in open(fn))
+            for fn in glob('banned_domains*')
+            for dom in open(fn))
     print(len(banned_domains),'banned domains')
   except:
     milter_log.exception('Error reading banned_domains')
@@ -2441,7 +2448,7 @@ def main():
   if config.wiretap_dest or config.smart_alias or dspam_userdir:
     flags = flags + Milter.ADDRCPT
   if srs or len(config.discard_users) > 0 \
-  	or config.smart_alias or dspam_userdir:
+          or config.smart_alias or dspam_userdir:
     flags = flags + Milter.DELRCPT
   Milter.set_flags(flags)
   socket.setdefaulttimeout(60)
@@ -2450,6 +2457,7 @@ def main():
   milter_log.info("bms milter shutdown")
   # force dereference of local data structures before shutdown
   getattr(local, 'whatever', None)
+  return 0
 
 if __name__ == "__main__":
   config = read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
@@ -2466,5 +2474,7 @@ if __name__ == "__main__":
       except:
         dspam_version = '1.1.4'
       assert dspam_version >= '1.1.5'
+      milter_log.info("pydspam %s activated",dspam_version)
     except: dspam_userdir = None
-  main()
+  rc = main()
+  sys.exit(rc)
