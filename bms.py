@@ -1816,8 +1816,8 @@ class bmsMilter(Milter.Base):
       if authres: self.arresults.append(
         authres.DKIMAuthenticationResult(result=result,
           result_comment = dkim_comment,
-          header_i=d.signature_fields.get(b'i'),
-          header_d=d.signature_fields.get(b'd')
+          header_i=d.signature_fields.get(b'i').decode('utf8'),
+          header_d=d.signature_fields.get(b'd').decode('utf8')
         )
       )
       if not res:
