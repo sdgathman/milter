@@ -28,6 +28,7 @@ class Config(object):
     self.trusted_forwarder = ()
     self.access_file = None
     self.access_file_nulls = False
+    self.access_file_colon = True
     #os.umask(config.savumask)
 
 config = None
@@ -55,6 +56,7 @@ def read_config(cfglist):
     conf.trusted_forwarder = cp.getlist('spf','trusted_relay')
   conf.access_file = cp.getdefault('spf','access_file',None)
   conf.access_file_nulls = cp.getboolean('spf','access_file_nulls')
+  conf.access_file_colon = cp.getboolean('spf','access_file_colon')
   return conf
 
 class spfMilter(Milter.Base):

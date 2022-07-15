@@ -1,3 +1,4 @@
+Connect:localhost	RELAY
 SPF-Pass:example.com	OK
 SPF-Neutral:example.com	REJECT
 HELO-Neutral:example.com        OK
@@ -7,3 +8,4 @@ SMTP-Auth:good@example.com      OK
 SMTP-Auth:example.com      REJECT
 SMTP-Auth:bad@localhost.localdomain     REJECT
 SMTP-Test:      REJECT
+SMTP-Test:.baz.com      WILDCARD

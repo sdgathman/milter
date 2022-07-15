@@ -119,6 +119,7 @@ class Config(object):
     )
     self.access_file = None
     self.access_file_nulls = False
+    self.access_file_colon = True
     ## List of executable extensions to be removed from incoming emails
     # Executable email attachments is the most common Windows malware
     # vector in my experience.

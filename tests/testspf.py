@@ -57,6 +57,7 @@ class TestMilter(TestBase,spfmilter.spfMilter):
     spfmilter.config = spfmilter.read_config(['test/spfmilter.cfg'])
     spfmilter.spfMilter.__init__(self)
     self.setsymval('j','test.milter.org')
+    print("access:",spfmilter.config.access_file)
 
 zonedata = {
   'example.com': [
@@ -82,8 +83,11 @@ class SPFMilterTestCase(unittest.TestCase):
 
   def testPolicy(self):
     with MTAPolicy('good@example.com',conf=spfmilter.config,access_file='test/access.db') as p:
+      print('use nulls:',p.use_nulls)
       pol = p.getPolicy('smtp-auth')
-    self.assertEqual(pol,'OK')
+      self.assertEqual(pol,'OK')
+      pol = p.getPolicy('smtp-test')
+      self.assertEqual(pol,'REJECT')
     with MTAPolicy('bad@example.com',conf=spfmilter.config,access_file='test/access.db') as p:
       pol = p.getPolicy('smtp-auth')
     self.assertEqual(pol,'REJECT')
@@ -93,6 +97,9 @@ class SPFMilterTestCase(unittest.TestCase):
     with MTAPolicy('any@random.com',conf=spfmilter.config,access_file='test/access.db') as p:
       pol = p.getPolicy('smtp-test')
     self.assertEqual(pol,'REJECT')
+    with MTAPolicy('foo@bar.baz.com',conf=spfmilter.config,access_file='test/access.db') as p:
+      pol = p.getPolicy('smtp-test')
+    self.assertEqual(pol,'WILDCARD')
 
   def testPass(self):
     milter = TestMilter()
@@ -214,7 +221,13 @@ if __name__ == '__main__':
   if os.access('test/access',os.R_OK):
     if not os.path.exists('test/access.db') or \
         os.path.getmtime('test/access') > os.path.getmtime('test/access.db'):
-      cmd = 'tr : ! <test/access | makemap hash test/access.db'
+      # Did not document why we translated ':' in access
+      config = spfmilter.read_config(['test/spfmilter.cfg'])
+      print("access file colon:",config.access_file_colon)
+      if config.access_file_colon:
+        cmd = 'cat test/access | makemap hash test/access.db'
+      else:
+        cmd = 'tr : ! <test/access | makemap hash test/access.db'
       if os.system(cmd):
         print('failed!')
         sys.exit(1)
